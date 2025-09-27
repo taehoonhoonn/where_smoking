@@ -15,6 +15,7 @@ downloads/
 eggs/
 .eggs/
 lib/
+!app/lib/
 lib64/
 parts/
 sdist/
@@ -35,6 +36,8 @@ MANIFEST
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
+nohup.out
+api_server.log
 
 # Unit test / coverage reports
 htmlcov/
@@ -144,6 +147,25 @@ ENV/
 env.bak/
 venv.bak/
 data/
+
+# Node / JavaScript
+node_modules/
+**/node_modules/
+
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+**/build/
+flutter_export_environment.sh
+app/web/config.js
+
+# Logs & runtime artifacts
+logs/
+**/logs/
+*.log
+*.tmp
 
 # Spyder project settings
 .spyderproject
