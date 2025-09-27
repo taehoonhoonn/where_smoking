@@ -1,0 +1,361 @@
+{
+  "summary": {
+    "total_count": 36,
+    "success_count": 30,
+    "fail_count": 6,
+    "success_rate": 83.33,
+    "start_time": "2025-09-20T19:00:06.327288",
+    "end_time": "2025-09-20T19:00:21.383223",
+    "processing_time": "0:00:15.055935"
+  },
+  "detailed_results": [
+    {
+      "index": 0,
+      "original_address": "서울특별시 중구 을지로 30",
+      "detail": "롯데백화점 측면부",
+      "status": "success",
+      "postcode": "04533",
+      "validated_address": "서울특별시 중구 을지로 30",
+      "jibeon_address": "서울특별시 중구 소공동 1",
+      "validation_time": "2025-09-20 19:00:06"
+    },
+    {
+      "index": 1,
+      "original_address": "서울특별시 중구 을지로 35",
+      "detail": "KEB하나은행본점 측면부",
+      "status": "success",
+      "postcode": "04534",
+      "validated_address": "서울특별시 중구 명동9길 35",
+      "jibeon_address": "서울특별시 중구 을지로2가 199-51",
+      "validation_time": "2025-09-20 19:00:06"
+    },
+    {
+      "index": 2,
+      "original_address": "서울특별시 중구 삼일대로 363",
+      "detail": "장교빌딩 전면부",
+      "status": "success",
+      "postcode": "04541",
+      "validated_address": "서울특별시 중구 삼일대로 363",
+      "jibeon_address": "서울특별시 중구 장교동 1",
+      "validation_time": "2025-09-20 19:00:07"
+    },
+    {
+      "index": 3,
+      "original_address": "서울특별시 중구 장충단로 275",
+      "detail": "두산타워 전면부",
+      "status": "success",
+      "postcode": "04563",
+      "validated_address": "서울특별시 중구 장충단로 275",
+      "jibeon_address": "서울특별시 중구 을지로6가 18-12",
+      "validation_time": "2025-09-20 19:00:07"
+    },
+    {
+      "index": 4,
+      "original_address": "서울특별시 중구 남대문로3가 23-3",
+      "detail": "한국은행 앞 광장 쉼터",
+      "status": "success",
+      "postcode": "04526",
+      "validated_address": "서울특별시 중구 남대문로 23-3",
+      "jibeon_address": "서울특별시 중구 남대문로3가 110-4",
+      "validation_time": "2025-09-20 19:00:07"
+    },
+    {
+      "index": 5,
+      "original_address": "서울특별시 중구 한강대로 416",
+      "detail": "서울스퀘어 측면부",
+      "status": "success",
+      "postcode": "04637",
+      "validated_address": "서울특별시 중구 한강대로 416",
+      "jibeon_address": "서울특별시 중구 남대문로5가 541",
+      "validation_time": "2025-09-20 19:00:07"
+    },
+    {
+      "index": 6,
+      "original_address": "서울특별시 중구 을지로2가 199-80",
+      "detail": "명동 하나플레이파크",
+      "status": "failed",
+      "error": "No results found",
+      "validation_time": "2025-09-20 19:00:08"
+    },
+    {
+      "index": 7,
+      "original_address": "서울특별시 중구 봉래동1가 111-3",
+      "detail": "남대문로 쉼터",
+      "status": "failed",
+      "error": "No results found",
+      "validation_time": "2025-09-20 19:00:09"
+    },
+    {
+      "index": 8,
+      "original_address": "서울특별시 중구 을지로 162-1",
+      "detail": "국도호텔 옆",
+      "status": "success",
+      "postcode": "04548",
+      "validated_address": "서울특별시 중구 을지로 162-1",
+      "jibeon_address": "서울특별시 중구 을지로4가 310-5",
+      "validation_time": "2025-09-20 19:00:09"
+    },
+    {
+      "index": 9,
+      "original_address": "서울특별시 용산구 한강대로30길 1",
+      "detail": "LS타워 옆",
+      "status": "success",
+      "postcode": "04386",
+      "validated_address": "서울특별시 용산구 한강대로30길 1",
+      "jibeon_address": "서울특별시 용산구 한강로2가 424-5",
+      "validation_time": "2025-09-20 19:00:09"
+    },
+    {
+      "index": 10,
+      "original_address": "서울특별시 용산구 동자동 14-151",
+      "detail": "서울역 11번 출구 옆",
+      "status": "success",
+      "postcode": "04323",
+      "validated_address": "서울특별시 용산구 한강대로 지하 392",
+      "jibeon_address": "서울특별시 용산구 동자동 14-151",
+      "validation_time": "2025-09-20 19:00:11"
+    },
+    {
+      "index": 11,
+      "original_address": "서울특별시 용산구 한강로3가 12-6",
+      "detail": "용산전자상가1 공영주차장 옆",
+      "status": "success",
+      "postcode": "04376",
+      "validated_address": "서울특별시 용산구 한강대로39길 12-6",
+      "jibeon_address": "서울특별시 용산구 한강로2가 2-138",
+      "validation_time": "2025-09-20 19:00:11"
+    },
+    {
+      "index": 12,
+      "original_address": "서울특별시 용산구 한강로3가 17-1",
+      "detail": "선인상가 옆",
+      "status": "success",
+      "postcode": "04353",
+      "validated_address": "서울특별시 용산구 한강대로 198-1",
+      "jibeon_address": "서울특별시 용산구 한강로1가 17-1",
+      "validation_time": "2025-09-20 19:00:11"
+    },
+    {
+      "index": 13,
+      "original_address": "서울특별시 성동구 성수동1가 685-709",
+      "detail": "디타워 포레스터",
+      "status": "failed",
+      "error": "No results found",
+      "validation_time": "2025-09-20 19:00:12"
+    },
+    {
+      "index": 14,
+      "original_address": "서울특별시 성동구 왕십리로 58",
+      "detail": "서울숲 포휴",
+      "status": "success",
+      "postcode": "04778",
+      "validated_address": "서울특별시 성동구 왕십리로 58",
+      "jibeon_address": "서울특별시 성동구 성수동1가 656-3",
+      "validation_time": "2025-09-20 19:00:12"
+    },
+    {
+      "index": 15,
+      "original_address": "서울특별시 성동구 행당동 1-182",
+      "detail": "왕십리역 6번 출구",
+      "status": "failed",
+      "error": "No results found",
+      "validation_time": "2025-09-20 19:00:12"
+    },
+    {
+      "index": 16,
+      "original_address": "서울특별시 성동구 성수일로 77",
+      "detail": "서울숲 삼성IT밸리",
+      "status": "success",
+      "postcode": "04790",
+      "validated_address": "서울특별시 성동구 성수일로 77",
+      "jibeon_address": "서울특별시 성동구 성수동1가 13-164",
+      "validation_time": "2025-09-20 19:00:13"
+    },
+    {
+      "index": 17,
+      "original_address": "서울특별시 성동구 성수이로 51",
+      "detail": "한라시그마밸리 1차",
+      "status": "success",
+      "postcode": "04781",
+      "validated_address": "서울특별시 성동구 성수이로 51",
+      "jibeon_address": "서울특별시 성동구 성수동2가 325-2",
+      "validation_time": "2025-09-20 19:00:13"
+    },
+    {
+      "index": 18,
+      "original_address": "서울특별시 성동구 연무장5가길 25",
+      "detail": "성수역 SKV1",
+      "status": "success",
+      "postcode": "04782",
+      "validated_address": "서울특별시 성동구 연무장5가길 25",
+      "jibeon_address": "서울특별시 성동구 성수동2가 315-61",
+      "validation_time": "2025-09-20 19:00:13"
+    },
+    {
+      "index": 19,
+      "original_address": "서울특별시 성동구 성수이로22길 37",
+      "detail": "아크밸리",
+      "status": "success",
+      "postcode": "04798",
+      "validated_address": "서울특별시 성동구 성수이로22길 37",
+      "jibeon_address": "서울특별시 성동구 성수동2가 277-43",
+      "validation_time": "2025-09-20 19:00:13"
+    },
+    {
+      "index": 20,
+      "original_address": "서울특별시 성동구 성수이로 101-1",
+      "detail": "성수역 3번출구 교각하부",
+      "status": "success",
+      "postcode": "04782",
+      "validated_address": "서울특별시 성동구 성수이로 101-1",
+      "jibeon_address": "서울특별시 성동구 성수동2가 276-5",
+      "validation_time": "2025-09-20 19:00:14"
+    },
+    {
+      "index": 21,
+      "original_address": "서울특별시 성동구 왕십리로 326",
+      "detail": "세신빌딩",
+      "status": "success",
+      "postcode": "04709",
+      "validated_address": "서울특별시 성동구 왕십리로 326",
+      "jibeon_address": "서울특별시 성동구 도선동 58-1",
+      "validation_time": "2025-09-20 19:00:14"
+    },
+    {
+      "index": 22,
+      "original_address": "서울특별시 성동구 아차산로17길 48",
+      "detail": "성수 SKV1센터",
+      "status": "success",
+      "postcode": "04799",
+      "validated_address": "서울특별시 성동구 아차산로17길 48",
+      "jibeon_address": "서울특별시 성동구 성수동2가 280",
+      "validation_time": "2025-09-20 19:00:14"
+    },
+    {
+      "index": 23,
+      "original_address": "서울특별시 성동구 행당동 192-3",
+      "detail": "왕십리 광장",
+      "status": "failed",
+      "error": "No results found",
+      "validation_time": "2025-09-20 19:00:15"
+    },
+    {
+      "index": 24,
+      "original_address": "서울특별시 성동구 성수이로 107-1",
+      "detail": "성수역 2번출구",
+      "status": "success",
+      "postcode": "04794",
+      "validated_address": "서울특별시 성동구 성수이로 107-1",
+      "jibeon_address": "서울특별시 성동구 성수동2가 289-30",
+      "validation_time": "2025-09-20 19:00:15"
+    },
+    {
+      "index": 25,
+      "original_address": "서울특별시 성동구 행당동 168-151",
+      "detail": "왕십리역6번출구 인근 자전거보관소",
+      "status": "success",
+      "postcode": "04750",
+      "validated_address": "서울특별시 성동구 왕십리광장로 17",
+      "jibeon_address": "서울특별시 성동구 행당동 168-151",
+      "validation_time": "2025-09-20 19:00:15"
+    },
+    {
+      "index": 26,
+      "original_address": "서울특별시 광진구 강변역로 50",
+      "detail": "동서울터미널앞 전면보도",
+      "status": "success",
+      "postcode": "05116",
+      "validated_address": "서울특별시 광진구 강변역로 50",
+      "jibeon_address": "서울특별시 광진구 구의동 546-1",
+      "validation_time": "2025-09-20 19:00:15"
+    },
+    {
+      "index": 27,
+      "original_address": "서울특별시 광진구 천호대로 731",
+      "detail": "아차산배수지 체육공원",
+      "status": "success",
+      "postcode": "04958",
+      "validated_address": "서울특별시 광진구 천호대로 731",
+      "jibeon_address": "서울특별시 광진구 구의동 38-4",
+      "validation_time": "2025-09-20 19:00:16"
+    },
+    {
+      "index": 28,
+      "original_address": "서울특별시 동대문구 왕산로 214",
+      "detail": "청량리역 선상광장",
+      "status": "success",
+      "postcode": "02555",
+      "validated_address": "서울특별시 동대문구 왕산로 214",
+      "jibeon_address": "서울특별시 동대문구 전농동 591-92",
+      "validation_time": "2025-09-20 19:00:17"
+    },
+    {
+      "index": 29,
+      "original_address": "서울특별시 노원구 중계로 36",
+      "detail": "불암산스포츠타운",
+      "status": "success",
+      "postcode": "01793",
+      "validated_address": "서울특별시 노원구 중계로 36",
+      "jibeon_address": "서울특별시 노원구 공릉동 141",
+      "validation_time": "2025-09-20 19:00:17"
+    },
+    {
+      "index": 30,
+      "original_address": "서울특별시 노원구 상계동 130",
+      "detail": "수락산스포츠타운",
+      "status": "success",
+      "postcode": "01697",
+      "validated_address": "서울특별시 노원구 상계로 130",
+      "jibeon_address": "서울특별시 노원구 상계동 381-37",
+      "validation_time": "2025-09-20 19:00:18"
+    },
+    {
+      "index": 31,
+      "original_address": "서울특별시 노원구 중계동 508-1",
+      "detail": "등나무근린공원 주차장",
+      "status": "failed",
+      "error": "No results found",
+      "validation_time": "2025-09-20 19:00:19"
+    },
+    {
+      "index": 32,
+      "original_address": "서울특별시 노원구 화랑로 574",
+      "detail": "육군사관학교 체육관",
+      "status": "success",
+      "postcode": "01805",
+      "validated_address": "서울특별시 노원구 화랑로 574",
+      "jibeon_address": "서울특별시 노원구 공릉동 산230-30",
+      "validation_time": "2025-09-20 19:00:20"
+    },
+    {
+      "index": 33,
+      "original_address": "서울특별시 노원구 동일로205길 21-2",
+      "detail": "중계 근린공원 주차장",
+      "status": "success",
+      "postcode": "01779",
+      "validated_address": "서울특별시 노원구 동일로205길 21-2",
+      "jibeon_address": "서울특별시 노원구 중계동 506-3",
+      "validation_time": "2025-09-20 19:00:20"
+    },
+    {
+      "index": 34,
+      "original_address": "서울특별시 노원구 덕릉로 460",
+      "detail": "마들스포츠타운",
+      "status": "success",
+      "postcode": "01770",
+      "validated_address": "서울특별시 노원구 덕릉로 460",
+      "jibeon_address": "서울특별시 노원구 상계동 770-2",
+      "validation_time": "2025-09-20 19:00:20"
+    },
+    {
+      "index": 35,
+      "original_address": "서울특별시 강서구 우장산로 66",
+      "detail": "강서구민회관",
+      "status": "success",
+      "postcode": "07684",
+      "validated_address": "서울특별시 강서구 우장산로 66",
+      "jibeon_address": "서울특별시 강서구 내발산동 산19-1",
+      "validation_time": "2025-09-20 19:00:21"
+    }
+  ]
+}

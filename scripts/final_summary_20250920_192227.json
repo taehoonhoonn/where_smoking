@@ -1,0 +1,10 @@
+{
+  "timestamp": "20250920_192227",
+  "total_addresses": 36,
+  "verified_addresses": 30,
+  "addresses_with_coordinates": 28,
+  "complete_addresses": 28,
+  "verification_rate": 83.33,
+  "coordinate_rate": 93.33,
+  "complete_rate": 77.78
+}

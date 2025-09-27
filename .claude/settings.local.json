@@ -1,7 +1,22 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(curl:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(~/flutter/bin/flutter run -d web-server --web-port=8081)",
+      "Bash(sudo -u postgres psql:*)",
+      "Bash(node server.js)",
+      "Bash(pkill:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)",
+      "Bash(netstat:*)",
+      "Bash(ss:*)",
+      "Bash(PORT=3001 node server.js)",
+      "Bash(~/flutter/bin/flutter run -d web-server --web-port=8080)",
+      "Bash(kill:*)",
+      "WebSearch",
+      "Bash(sudo service:*)"
     ],
     "deny": [],
     "ask": []

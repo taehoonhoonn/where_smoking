@@ -1,0 +1,345 @@
+{
+  "metadata": {
+    "export_date": "2025-09-20T20:31:33.592121",
+    "total_count": 28,
+    "database": "smoking_areas_db"
+  },
+  "smoking_areas": [
+    {
+      "id": 1,
+      "category": "부분 개방형",
+      "address": "서울특별시 중구 을지로 30",
+      "detail": "롯데백화점 측면부",
+      "postal_code": "4533",
+      "coordinates": {
+        "longitude": 126.9810076,
+        "latitude": 37.5653459
+      },
+      "created_at": "2025-09-20T20:31:33.577482"
+    },
+    {
+      "id": 2,
+      "category": "부분 개방형",
+      "address": "서울특별시 중구 을지로 35",
+      "detail": "KEB하나은행본점 측면부",
+      "postal_code": "4534",
+      "coordinates": {
+        "longitude": 126.9840955,
+        "latitude": 37.5653073
+      },
+      "created_at": "2025-09-20T20:31:33.577482"
+    },
+    {
+      "id": 3,
+      "category": "부분 개방형",
+      "address": "서울특별시 중구 삼일대로 363",
+      "detail": "장교빌딩 전면부",
+      "postal_code": "4541",
+      "coordinates": {
+        "longitude": 126.9870523,
+        "latitude": 37.5671565
+      },
+      "created_at": "2025-09-20T20:31:33.577482"
+    },
+    {
+      "id": 4,
+      "category": "부분 개방형",
+      "address": "서울특별시 중구 장충단로 275",
+      "detail": "두산타워 전면부",
+      "postal_code": "4563",
+      "coordinates": {
+        "longitude": 127.0087751,
+        "latitude": 37.5688849
+      },
+      "created_at": "2025-09-20T20:31:33.577482"
+    },
+    {
+      "id": 5,
+      "category": "부분 개방형",
+      "address": "서울특별시 중구 남대문로3가 23-3",
+      "detail": "한국은행 앞 광장 쉼터",
+      "postal_code": "4526",
+      "coordinates": {
+        "longitude": 126.9785106,
+        "latitude": 37.561276
+      },
+      "created_at": "2025-09-20T20:31:33.577482"
+    },
+    {
+      "id": 6,
+      "category": "부분 개방형",
+      "address": "서울특별시 중구 한강대로 416",
+      "detail": "서울스퀘어 측면부",
+      "postal_code": "4637",
+      "coordinates": {
+        "longitude": 126.9737513,
+        "latitude": 37.5555036
+      },
+      "created_at": "2025-09-20T20:31:33.577482"
+    },
+    {
+      "id": 7,
+      "category": "부분 개방형",
+      "address": "서울특별시 중구 을지로 162-1",
+      "detail": "국도호텔 옆",
+      "postal_code": "4548",
+      "coordinates": {
+        "longitude": 126.9959844,
+        "latitude": 37.5663431
+      },
+      "created_at": "2025-09-20T20:31:33.577482"
+    },
+    {
+      "id": 8,
+      "category": "완전 폐쇄형",
+      "address": "서울특별시 용산구 한강대로30길 1",
+      "detail": "LS타워 옆",
+      "postal_code": "4386",
+      "coordinates": {
+        "longitude": 126.967025,
+        "latitude": 37.5278972
+      },
+      "created_at": "2025-09-20T20:31:33.577482"
+    },
+    {
+      "id": 9,
+      "category": "부분 개방형",
+      "address": "서울특별시 용산구 동자동 14-151",
+      "detail": "서울역 11번 출구 옆",
+      "postal_code": "4323",
+      "coordinates": {
+        "longitude": 126.9728055,
+        "latitude": 37.5532
+      },
+      "created_at": "2025-09-20T20:31:33.577482"
+    },
+    {
+      "id": 10,
+      "category": "부분 개방형",
+      "address": "서울특별시 용산구 한강로3가 12-6",
+      "detail": "용산전자상가1 공영주차장 옆",
+      "postal_code": "4376",
+      "coordinates": {
+        "longitude": 126.9686049,
+        "latitude": 37.5310378
+      },
+      "created_at": "2025-09-20T20:31:33.577482"
+    },
+    {
+      "id": 11,
+      "category": "부분 개방형",
+      "address": "서울특별시 용산구 한강로3가 17-1",
+      "detail": "선인상가 옆",
+      "postal_code": "4353",
+      "coordinates": {
+        "longitude": 126.9747326,
+        "latitude": 37.5360428
+      },
+      "created_at": "2025-09-20T20:31:33.577482"
+    },
+    {
+      "id": 12,
+      "category": "완전 폐쇄형",
+      "address": "서울특별시 성동구 왕십리로 58",
+      "detail": "서울숲 포휴",
+      "postal_code": "4778",
+      "coordinates": {
+        "longitude": 127.0452053,
+        "latitude": 37.5426959
+      },
+      "created_at": "2025-09-20T20:31:33.577482"
+    },
+    {
+      "id": 13,
+      "category": "완전 폐쇄형",
+      "address": "서울특별시 성동구 성수일로 77",
+      "detail": "서울숲 삼성IT밸리",
+      "postal_code": "4790",
+      "coordinates": {
+        "longitude": 127.0503435,
+        "latitude": 37.5474049
+      },
+      "created_at": "2025-09-20T20:31:33.577482"
+    },
+    {
+      "id": 14,
+      "category": "완전 폐쇄형",
+      "address": "서울특별시 성동구 성수이로 51",
+      "detail": "한라시그마밸리 1차",
+      "postal_code": "4781",
+      "coordinates": {
+        "longitude": 127.055101,
+        "latitude": 37.5402765
+      },
+      "created_at": "2025-09-20T20:31:33.577482"
+    },
+    {
+      "id": 15,
+      "category": "완전 폐쇄형",
+      "address": "서울특별시 성동구 연무장5가길 25",
+      "detail": "성수역 SKV1",
+      "postal_code": "4782",
+      "coordinates": {
+        "longitude": 127.0556139,
+        "latitude": 37.5435511
+      },
+      "created_at": "2025-09-20T20:31:33.577482"
+    },
+    {
+      "id": 16,
+      "category": "완전 폐쇄형",
+      "address": "서울특별시 성동구 성수이로22길 37",
+      "detail": "아크밸리",
+      "postal_code": "4798",
+      "coordinates": {
+        "longitude": 127.061316,
+        "latitude": 37.5439218
+      },
+      "created_at": "2025-09-20T20:31:33.577482"
+    },
+    {
+      "id": 17,
+      "category": "완전 폐쇄형",
+      "address": "서울특별시 성동구 성수이로 101-1",
+      "detail": "성수역 3번출구 교각하부",
+      "postal_code": "4782",
+      "coordinates": {
+        "longitude": 127.0569243,
+        "latitude": 37.5440133
+      },
+      "created_at": "2025-09-20T20:31:33.577482"
+    },
+    {
+      "id": 18,
+      "category": "완전 폐쇄형",
+      "address": "서울특별시 성동구 왕십리로 326",
+      "detail": "세신빌딩",
+      "postal_code": "4709",
+      "coordinates": {
+        "longitude": 127.0338943,
+        "latitude": 37.5627269
+      },
+      "created_at": "2025-09-20T20:31:33.577482"
+    },
+    {
+      "id": 19,
+      "category": "완전 폐쇄형",
+      "address": "서울특별시 성동구 아차산로17길 48",
+      "detail": "성수 SKV1센터",
+      "postal_code": "4799",
+      "coordinates": {
+        "longitude": 127.0658895,
+        "latitude": 37.5463938
+      },
+      "created_at": "2025-09-20T20:31:33.577482"
+    },
+    {
+      "id": 20,
+      "category": "부분 개방형",
+      "address": "서울특별시 성동구 성수이로 107-1",
+      "detail": "성수역 2번출구",
+      "postal_code": "4794",
+      "coordinates": {
+        "longitude": 127.057091,
+        "latitude": 37.5444872
+      },
+      "created_at": "2025-09-20T20:31:33.577482"
+    },
+    {
+      "id": 21,
+      "category": "완전 폐쇄형",
+      "address": "서울특별시 성동구 행당동 168-151",
+      "detail": "왕십리역6번출구 인근 자전거보관소",
+      "postal_code": "4750",
+      "coordinates": {
+        "longitude": 127.0383942,
+        "latitude": 37.5614418
+      },
+      "created_at": "2025-09-20T20:31:33.577482"
+    },
+    {
+      "id": 22,
+      "category": "부분 개방형",
+      "address": "서울특별시 광진구 강변역로 50",
+      "detail": "동서울터미널앞 전면보도",
+      "postal_code": "5116",
+      "coordinates": {
+        "longitude": 127.0941841,
+        "latitude": 37.5345385
+      },
+      "created_at": "2025-09-20T20:31:33.577482"
+    },
+    {
+      "id": 23,
+      "category": "완전 폐쇄형",
+      "address": "서울특별시 동대문구 왕산로 214",
+      "detail": "청량리역 선상광장",
+      "postal_code": "2555",
+      "coordinates": {
+        "longitude": 127.051145,
+        "latitude": 37.5841974
+      },
+      "created_at": "2025-09-20T20:31:33.577482"
+    },
+    {
+      "id": 24,
+      "category": "완전 폐쇄형",
+      "address": "서울특별시 노원구 중계로 36",
+      "detail": "불암산스포츠타운",
+      "postal_code": "1793",
+      "coordinates": {
+        "longitude": 127.0832403,
+        "latitude": 37.6387792
+      },
+      "created_at": "2025-09-20T20:31:33.577482"
+    },
+    {
+      "id": 25,
+      "category": "완전 폐쇄형",
+      "address": "서울특별시 노원구 상계동 130",
+      "detail": "수락산스포츠타운",
+      "postal_code": "1697",
+      "coordinates": {
+        "longitude": 127.0690917,
+        "latitude": 37.6580753
+      },
+      "created_at": "2025-09-20T20:31:33.577482"
+    },
+    {
+      "id": 26,
+      "category": "부분 개방형",
+      "address": "서울특별시 노원구 동일로205길 21-2",
+      "detail": "중계 근린공원 주차장",
+      "postal_code": "1779",
+      "coordinates": {
+        "longitude": 127.0646243,
+        "latitude": 37.6406487
+      },
+      "created_at": "2025-09-20T20:31:33.577482"
+    },
+    {
+      "id": 27,
+      "category": "완전 폐쇄형",
+      "address": "서울특별시 노원구 덕릉로 460",
+      "detail": "마들스포츠타운",
+      "postal_code": "1770",
+      "coordinates": {
+        "longitude": 127.059922,
+        "latitude": 37.6443825
+      },
+      "created_at": "2025-09-20T20:31:33.577482"
+    },
+    {
+      "id": 28,
+      "category": "부분 개방형",
+      "address": "서울특별시 강서구 우장산로 66",
+      "detail": "강서구민회관",
+      "postal_code": "7684",
+      "coordinates": {
+        "longitude": 126.8436489,
+        "latitude": 37.5534364
+      },
+      "created_at": "2025-09-20T20:31:33.577482"
+    }
+  ]
+}

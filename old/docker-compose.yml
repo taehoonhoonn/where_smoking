@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 데이터베이스
+  postgres:
+    image: postgres:15-alpine
+    container_name: smoking_areas_db
+    environment:
+      POSTGRES_DB: smoking_areas_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - smoking_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d smoking_areas_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # API 서버
+  api_server:
+    build:
+      context: ./api_server
+      dockerfile: Dockerfile
+    container_name: smoking_areas_api
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: smoking_areas_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      LOG_LEVEL: debug
+      DEBUG_SQL: "true"
+      DEBUG_API: "true"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./api_server:/app
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - smoking_network
+    restart: unless-stopped
+    command: npm run dev
+
+  # pgAdmin (데이터베이스 관리 도구)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: smoking_areas_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@smoking-areas.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "8080:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    networks:
+      - smoking_network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    name: smoking_areas_postgres_data
+  pgadmin_data:
+    name: smoking_areas_pgadmin_data
+
+networks:
+  smoking_network:
+    name: smoking_areas_network
+    driver: bridge
