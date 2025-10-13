@@ -5,12 +5,14 @@
 CREATE TABLE IF NOT EXISTS smoking_areas (
     id SERIAL PRIMARY KEY,
     category VARCHAR(20) NOT NULL,
+    submitted_category VARCHAR(20),
     address TEXT NOT NULL,
     detail TEXT,
     postal_code VARCHAR(10),
     longitude DECIMAL(10, 7) NOT NULL,
     latitude DECIMAL(10, 7) NOT NULL,
     status VARCHAR(10) DEFAULT 'active',
+    report_count INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -40,11 +42,13 @@ CREATE OR REPLACE VIEW active_smoking_areas AS
 SELECT
     id,
     category,
+    submitted_category,
     address,
     detail,
     postal_code,
     longitude,
     latitude,
+    report_count,
     created_at
 FROM smoking_areas
 WHERE status = 'active';

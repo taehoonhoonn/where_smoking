@@ -18,6 +18,10 @@ DB_PORT=5432
 DB_NAME=smoking_areas_db
 DB_USER=postgres
 DB_PASSWORD=postgres
+
+# 관리자 전용 API 토큰 (선택 사항)
+# 설정하면 관리자 엔드포인트 접근 시 `X-Admin-Token` 헤더가 필요합니다.
+ADMIN_ACCESS_TOKEN=
 ```
 
 ### 3. 서버 실행
@@ -58,10 +62,30 @@ GET /api/v1/smoking-areas/nearby?lat=37.5547&lng=126.9707&radius=1000&limit=10
 GET /api/v1/smoking-areas/123
 
 # 카테고리별 조회
-GET /api/v1/smoking-areas/category/부분%20개방형
+GET /api/v1/smoking-areas/category/시민제보
 
 # 통계 정보
 GET /api/v1/smoking-areas/statistics
+
+# 허위 장소 신고
+POST /api/v1/smoking-areas/:id/report
+```
+
+### 관리자 전용
+
+`ADMIN_ACCESS_TOKEN` 환경 변수를 설정하면 아래 엔드포인트는 `X-Admin-Token`
+헤더를 통해 인증된 요청만 허용합니다.
+
+```bash
+# 승인 대기 목록 조회
+GET /api/v1/smoking-areas/pending
+
+# 대기 항목 승인/거부
+PATCH /api/v1/smoking-areas/:id/approve
+DELETE /api/v1/smoking-areas/:id/reject
+
+# 활성화된 흡연구역 삭제 (지도에서 제거)
+DELETE /api/v1/smoking-areas/:id
 ```
 
 ## 🔍 디버깅 기능
@@ -141,7 +165,7 @@ curl "http://localhost:3000/api/v1/smoking-areas/nearby?lat=37.5547&lng=126.9707
   "smoking_areas": [
     {
       "id": 1,
-      "category": "부분 개방형",
+      "category": "공공데이타",
       "address": "서울특별시 중구 을지로 30",
       "detail": "롯데백화점 측면부",
       "coordinates": {

@@ -101,11 +101,52 @@ class CoordinateAdder:
 
         print(f"⏰ 시작 시간: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
-        # 좌표 관련 컬럼 초기화
-        df['kakao_longitude'] = ''
-        df['kakao_latitude'] = ''
-        df['좌표변환상태'] = ''
-        df['좌표변환일시'] = ''
+        # 좌표 관련 컬럼 초기화 (기존 값이 있으면 유지)
+        if 'kakao_longitude' not in df.columns:
+            df['kakao_longitude'] = ''
+        if 'kakao_latitude' not in df.columns:
+            df['kakao_latitude'] = ''
+        if '좌표변환상태' not in df.columns:
+            df['좌표변환상태'] = ''
+        if '좌표변환일시' not in df.columns:
+            df['좌표변환일시'] = ''
+
+        # 좌표가 이미 존재하면 Kakao API 호출을 건너뛰기 위한 헬퍼
+        longitude_candidates = [
+            col for col in [
+                'kakao_longitude',
+                'longitude',
+                'longitutde',  # CSV 오타 대응
+                '경도',
+                'x',
+                'lon'
+            ] if col in df.columns
+        ]
+
+        latitude_candidates = [
+            col for col in [
+                'kakao_latitude',
+                'latitude',
+                '위도',
+                'y',
+                'lat'
+            ] if col in df.columns
+        ]
+
+        def pick_coordinate(row, candidates):
+            for column in candidates:
+                value = row.get(column)
+                if pd.isna(value):
+                    continue
+                if isinstance(value, str):
+                    value = value.strip()
+                    if value == '':
+                        continue
+                try:
+                    return float(value)
+                except (TypeError, ValueError):
+                    continue
+            return None
 
         success_count = 0
         fail_count = 0
@@ -121,6 +162,32 @@ class CoordinateAdder:
             address = row['표준화주소'] if pd.notna(row['표준화주소']) and row['표준화주소'] else row['주소']
 
             print(f"🗺️ [{success_count + fail_count + 1}/{total_to_process}] {address}")
+
+            # 이미 좌표가 있는 경우 재사용
+            existing_lon = pick_coordinate(row, longitude_candidates)
+            existing_lat = pick_coordinate(row, latitude_candidates)
+
+            if existing_lon is not None and existing_lat is not None:
+                df.at[idx, 'kakao_longitude'] = existing_lon
+                df.at[idx, 'kakao_latitude'] = existing_lat
+                if pd.notna(row.get('좌표변환상태')) and row.get('좌표변환상태'):
+                    df.at[idx, '좌표변환상태'] = row['좌표변환상태']
+                else:
+                    df.at[idx, '좌표변환상태'] = '성공'
+                if pd.notna(row.get('좌표변환일시')) and row.get('좌표변환일시'):
+                    df.at[idx, '좌표변환일시'] = row['좌표변환일시']
+                else:
+                    df.at[idx, '좌표변환일시'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+                success_count += 1
+                print(f"    ↪ 기존 좌표 사용 - ({existing_lat}, {existing_lon})")
+
+                if (success_count + fail_count) % 5 == 0:
+                    progress = (success_count + fail_count) / total_to_process * 100
+                    coord_success_rate = success_count / (success_count + fail_count) * 100
+                    print(f"    📊 진행률: {progress:.1f}% | 좌표변환 성공률: {coord_success_rate:.1f}%")
+
+                continue
 
             is_success, result = self.get_coordinates_from_kakao(address)
             coord_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -143,7 +210,7 @@ class CoordinateAdder:
             # 5개마다 진행률 표시
             if (success_count + fail_count) % 5 == 0:
                 progress = (success_count + fail_count) / total_to_process * 100
-                coord_success_rate = success_count / (success_count + fail_count) * 100
+                coord_success_rate = success_count / (success_count + fail_count) * 100 if (success_count + fail_count) > 0 else 0
                 print(f"    📊 진행률: {progress:.1f}% | 좌표변환 성공률: {coord_success_rate:.1f}%")
 
             # API 제한 고려 (카카오는 초당 10회 제한)

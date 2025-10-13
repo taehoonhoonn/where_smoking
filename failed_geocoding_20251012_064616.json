@@ -1,0 +1,369 @@
+{
+  "timestamp": "2025-10-12T06:46:16.311566",
+  "total_rows": 469,
+  "successes": 439,
+  "api_calls": 281,
+  "reused_coordinates": 188,
+  "failures": [
+    {
+      "index": 76,
+      "query": "nan",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 120,
+      "query": "광진구 강변북로 26",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 121,
+      "query": "천호대로 731",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 125,
+      "query": "2 경영관 뒤",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 126,
+      "query": "5 예술문화관 뒤",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 127,
+      "query": "9 상허기념도서관 동측",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 128,
+      "query": "11 생명과학관 뒤",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 129,
+      "query": "8 법학관 앞",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 130,
+      "query": "14 산학협동관 주차장",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 131,
+      "query": "15 수의학관 주차장",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 132,
+      "query": "16 새천년관 지하2층 출입문 옆",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 133,
+      "query": "17 건축관 앞, 18해봉부동산확과 뒤",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 134,
+      "query": "19 인문학관",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 135,
+      "query": "21 공학관 중앙정원",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 136,
+      "query": "21 공학관 C동 뒤",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 137,
+      "query": "22 신공학관 앞",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 138,
+      "query": "23 신공학관 앞",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 139,
+      "query": "23 과학관 북측",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 140,
+      "query": "26 쿨하우스 뒤",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 141,
+      "query": "황소상공원 앞(누렁)",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 142,
+      "query": "황소상공원 앞(검정)",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 156,
+      "query": "천호대로731",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 282,
+      "query": "답십리로92길 68(장안동)",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 285,
+      "query": "한천로46길 2(장안동)",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 286,
+      "query": "답십리로 29(답십리동)",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 287,
+      "query": "답십리로 29(답십리동)",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 288,
+      "query": "답십리로 29(답십리동)",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 295,
+      "query": "망우로12길 6(휘경동)",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 320,
+      "query": "천호대로 444 1(장안동)",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 465,
+      "query": "경상북도 구미시 선산읍 선산대로83-2",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    }
+  ]
+}

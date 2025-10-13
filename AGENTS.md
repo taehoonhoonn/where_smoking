@@ -35,3 +35,4 @@
 - PostgreSQL must be reachable at `localhost:5432`; update `.env` overrides when using alternative hosts.
 - Never commit `app/web/config.js` or `api_server/.env`; both are ignored and should stay local.
 - When touching JS interop for the map, guard new globals to avoid clobbering existing window-level callbacks.
+- Admin-only API actions (approve/reject/delete) require matching `ADMIN_ACCESS_TOKEN` in the server `.env` and `window.ADMIN_ACCESS_TOKEN` in `app/web/config.js`; without both, admin controls remain hidden.

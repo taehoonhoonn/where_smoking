@@ -9,8 +9,8 @@ class SmokingAreaController {
 
       const result = await query(`
         SELECT
-          id, category, address, detail, postal_code,
-          longitude, latitude, created_at
+          id, category, submitted_category, address, detail, postal_code,
+          longitude, latitude, report_count, created_at
         FROM smoking_areas
         WHERE status = 'active'
         ORDER BY id
@@ -22,6 +22,7 @@ class SmokingAreaController {
         smoking_areas: result.rows.map(row => ({
           id: row.id,
           category: row.category,
+          submitted_category: row.submitted_category,
           address: row.address,
           detail: row.detail,
           postal_code: row.postal_code,
@@ -29,6 +30,7 @@ class SmokingAreaController {
             longitude: parseFloat(row.longitude),
             latitude: parseFloat(row.latitude),
           },
+          report_count: parseInt(row.report_count, 10) || 0,
           created_at: row.created_at,
         })),
       };
@@ -67,8 +69,8 @@ class SmokingAreaController {
       // 하버사인 공식을 사용한 거리 계산 쿼리
       const result = await query(`
         SELECT
-          id, category, address, detail, postal_code,
-          longitude, latitude, created_at,
+          id, category, submitted_category, address, detail, postal_code,
+          longitude, latitude, report_count, created_at,
           (
             6371000 * acos(
               cos(radians($1)) * cos(radians(latitude)) *
@@ -108,6 +110,7 @@ class SmokingAreaController {
             longitude: parseFloat(row.longitude),
             latitude: parseFloat(row.latitude),
           },
+          report_count: parseInt(row.report_count, 10) || 0,
           distance_meters: Math.round(parseFloat(row.distance_meters)),
           created_at: row.created_at,
         })),
@@ -143,8 +146,8 @@ class SmokingAreaController {
 
       const result = await query(`
         SELECT
-          id, category, address, detail, postal_code,
-          longitude, latitude, created_at, updated_at
+          id, category, submitted_category, address, detail, postal_code,
+          longitude, latitude, report_count, created_at, updated_at
         FROM smoking_areas
         WHERE id = $1 AND status = 'active'
       `, [id]);
@@ -165,6 +168,7 @@ class SmokingAreaController {
         smoking_area: {
           id: row.id,
           category: row.category,
+          submitted_category: row.submitted_category,
           address: row.address,
           detail: row.detail,
           postal_code: row.postal_code,
@@ -172,6 +176,7 @@ class SmokingAreaController {
             longitude: parseFloat(row.longitude),
             latitude: parseFloat(row.latitude),
           },
+          report_count: parseInt(row.report_count, 10) || 0,
           created_at: row.created_at,
           updated_at: row.updated_at,
         },
@@ -204,8 +209,8 @@ class SmokingAreaController {
 
       const result = await query(`
         SELECT
-          id, category, address, detail, postal_code,
-          longitude, latitude, created_at
+          id, category, submitted_category, address, detail, postal_code,
+          longitude, latitude, report_count, created_at
         FROM smoking_areas
         WHERE category = $1 AND status = 'active'
         ORDER BY address
@@ -225,6 +230,7 @@ class SmokingAreaController {
             longitude: parseFloat(row.longitude),
             latitude: parseFloat(row.latitude),
           },
+          report_count: parseInt(row.report_count, 10) || 0,
           created_at: row.created_at,
         })),
       };
@@ -330,19 +336,24 @@ class SmokingAreaController {
    */
   static async createPendingArea(req, res) {
     try {
-      const { latitude, longitude, category, detail } = req.body;
+      const { latitude, longitude, detail, category } = req.body;
+      const storedCategory = '시민제보';
+      const submittedCategory = typeof category === 'string' ? category.trim() : null;
+
+      const latNum = Number(latitude);
+      const lngNum = Number(longitude);
 
       // 입력 유효성 검증
-      if (!latitude || !longitude || !category) {
+      if (!Number.isFinite(latNum) || !Number.isFinite(lngNum)) {
         return res.status(400).json({
           success: false,
           error: 'Validation error',
-          message: '위도, 경도, 카테고리는 필수입니다.',
+          message: '유효한 위도와 경도를 입력하세요.',
         });
       }
 
       // 위도/경도 범위 검증 (서울 지역 대략적 범위)
-      if (latitude < 37.3 || latitude > 37.8 || longitude < 126.5 || longitude > 127.3) {
+      if (latNum < 37.3 || latNum > 37.8 || lngNum < 126.5 || lngNum > 127.3) {
         return res.status(400).json({
           success: false,
           error: 'Validation error',
@@ -350,46 +361,40 @@ class SmokingAreaController {
         });
       }
 
-      // 카테고리 검증
-      if (!['부분 개방형', '완전 폐쇄형'].includes(category)) {
-        return res.status(400).json({
-          success: false,
-          error: 'Validation error',
-          message: '유효하지 않은 카테고리입니다.',
-        });
-      }
-
       debugLogger('Creating pending smoking area', {
-        latitude,
-        longitude,
-        category,
+        latitude: latNum,
+        longitude: lngNum,
+        category: storedCategory,
+        submittedCategory,
         detail: detail ? 'provided' : 'not provided',
       });
 
       // 역지오코딩으로 주소 가져오기 (임시로 좌표 기반 주소 생성)
-      const address = `서울특별시 (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
+      const address = `서울특별시 (${latNum.toFixed(4)}, ${lngNum.toFixed(4)})`;
 
       // 데이터베이스에 대기 상태로 저장
       const result = await query(`
         INSERT INTO smoking_areas (
-          category, address, detail, postal_code,
+          category, submitted_category, address, detail, postal_code,
           longitude, latitude, status, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, 'pending', NOW(), NOW())
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', NOW(), NOW())
         RETURNING id, created_at
       `, [
-        category,
+        storedCategory,
+        submittedCategory,
         address,
         detail || null,
         null, // postal_code는 나중에 관리자가 수정
-        longitude,
-        latitude
+        lngNum,
+        latNum
       ]);
 
       const newArea = result.rows[0];
 
       debugLogger('Successfully created pending smoking area', {
         id: newArea.id,
-        category,
+        category: storedCategory,
+        submittedCategory,
         status: 'pending',
       });
 
@@ -398,14 +403,16 @@ class SmokingAreaController {
         message: '흡연구역 등록 신청이 완료되었습니다. 관리자 검토 후 반영됩니다.',
         smoking_area: {
           id: newArea.id,
-          category,
+          category: storedCategory,
+          submitted_category: submittedCategory,
           address,
           detail: detail || null,
           coordinates: {
-            latitude: parseFloat(latitude),
-            longitude: parseFloat(longitude),
+            latitude: latNum,
+            longitude: lngNum,
           },
           status: 'pending',
+          report_count: 0,
           created_at: newArea.created_at,
         },
       });
@@ -433,8 +440,8 @@ class SmokingAreaController {
 
       const result = await query(`
         SELECT
-          id, category, address, detail, postal_code,
-          longitude, latitude, created_at
+          id, category, submitted_category, address, detail, postal_code,
+          longitude, latitude, report_count, created_at
         FROM smoking_areas
         WHERE status = 'pending'
         ORDER BY created_at DESC
@@ -446,6 +453,7 @@ class SmokingAreaController {
         pending_areas: result.rows.map(row => ({
           id: row.id,
           category: row.category,
+          submitted_category: row.submitted_category,
           address: row.address,
           detail: row.detail,
           postal_code: row.postal_code,
@@ -453,6 +461,7 @@ class SmokingAreaController {
             longitude: parseFloat(row.longitude),
             latitude: parseFloat(row.latitude),
           },
+          report_count: parseInt(row.report_count, 10) || 0,
           created_at: row.created_at,
         })),
       };
@@ -487,7 +496,7 @@ class SmokingAreaController {
 
       // 해당 ID의 pending 상태 확인
       const checkResult = await query(`
-        SELECT id, category, address
+        SELECT id, category, submitted_category, address
         FROM smoking_areas
         WHERE id = $1 AND status = 'pending'
       `, [id]);
@@ -505,9 +514,9 @@ class SmokingAreaController {
       // 상태를 active로 변경
       const result = await query(`
         UPDATE smoking_areas
-        SET status = 'active', updated_at = NOW()
+        SET category = '시민제보', status = 'active', updated_at = NOW()
         WHERE id = $1 AND status = 'pending'
-        RETURNING id, category, address, updated_at
+        RETURNING id, category, submitted_category, address, report_count, updated_at
       `, [id]);
 
       const approvedArea = result.rows[0];
@@ -515,6 +524,7 @@ class SmokingAreaController {
       debugLogger('Successfully approved smoking area', {
         id: approvedArea.id,
         category: approvedArea.category,
+        submittedCategory: approvedArea.submitted_category,
       });
 
       res.json({
@@ -523,7 +533,9 @@ class SmokingAreaController {
         smoking_area: {
           id: approvedArea.id,
           category: approvedArea.category,
+          submitted_category: approvedArea.submitted_category,
           address: approvedArea.address,
+          report_count: parseInt(approvedArea.report_count, 10) || 0,
           status: 'active',
           approved_at: approvedArea.updated_at,
         },
@@ -556,7 +568,7 @@ class SmokingAreaController {
 
       // 해당 ID의 pending 상태 확인
       const checkResult = await query(`
-        SELECT id, category, address
+        SELECT id, category, submitted_category, address
         FROM smoking_areas
         WHERE id = $1 AND status = 'pending'
       `, [id]);
@@ -576,7 +588,7 @@ class SmokingAreaController {
         UPDATE smoking_areas
         SET status = 'rejected', detail = COALESCE($2, detail), updated_at = NOW()
         WHERE id = $1 AND status = 'pending'
-        RETURNING id, category, address, updated_at
+        RETURNING id, category, submitted_category, address, report_count, updated_at
       `, [id, reason]);
 
       const rejectedArea = result.rows[0];
@@ -592,10 +604,12 @@ class SmokingAreaController {
         smoking_area: {
           id: rejectedArea.id,
           category: rejectedArea.category,
+          submitted_category: rejectedArea.submitted_category,
           address: rejectedArea.address,
           status: 'rejected',
           rejected_at: rejectedArea.updated_at,
           reason: reason || null,
+          report_count: parseInt(rejectedArea.report_count, 10) || 0,
         },
       });
 
@@ -611,6 +625,119 @@ class SmokingAreaController {
         success: false,
         error: 'Internal server error',
         message: 'Failed to reject smoking area',
+      });
+    }
+  }
+
+  /**
+   * 활성화된 흡연구역 삭제 (관리자용)
+   */
+  static async deleteArea(req, res) {
+    try {
+      const { id } = req.params;
+
+      debugLogger('Deleting smoking area', { id });
+
+      const result = await query(`
+        UPDATE smoking_areas
+        SET status = 'deleted', updated_at = NOW()
+        WHERE id = $1 AND status = 'active'
+        RETURNING id, category, submitted_category, address, report_count, updated_at
+      `, [id]);
+
+      if (result.rows.length === 0) {
+        debugLogger('Active smoking area not found for deletion', { id });
+
+        return res.status(404).json({
+          success: false,
+          error: 'Not found',
+          message: `Active smoking area with ID ${id} not found`,
+        });
+      }
+
+      const deletedArea = result.rows[0];
+
+      debugLogger('Successfully deleted smoking area', {
+        id: deletedArea.id,
+        category: deletedArea.category,
+      });
+
+      res.json({
+        success: true,
+        message: '흡연구역이 지도에서 제거되었습니다.',
+        smoking_area: {
+          id: deletedArea.id,
+          category: deletedArea.category,
+          submitted_category: deletedArea.submitted_category,
+          address: deletedArea.address,
+          status: 'deleted',
+          deleted_at: deletedArea.updated_at,
+          report_count: parseInt(deletedArea.report_count, 10) || 0,
+        },
+      });
+
+    } catch (error) {
+      errorLogger(error, {
+        context: 'deleteArea',
+        params: req.params,
+        requestId: req.id,
+      });
+
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error',
+        message: 'Failed to delete smoking area',
+      });
+    }
+  }
+
+  /**
+   * 허위 장소 신고 처리
+   */
+  static async reportFalseArea(req, res) {
+    try {
+      const { id } = req.params;
+
+      debugLogger('Reporting smoking area as false', { id });
+
+      const result = await query(`
+        UPDATE smoking_areas
+        SET report_count = COALESCE(report_count, 0) + 1, updated_at = NOW()
+        WHERE id = $1
+        RETURNING id, category, report_count
+      `, [id]);
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Not found',
+          message: `Smoking area with ID ${id} not found`,
+        });
+      }
+
+      const updated = result.rows[0];
+
+      res.json({
+        success: true,
+        message: '허위 장소 신고가 접수되었습니다.',
+        smoking_area: {
+          id: updated.id,
+          category: updated.category,
+          report_count: parseInt(updated.report_count, 10) || 0,
+        },
+      });
+
+    } catch (error) {
+      errorLogger(error, {
+        context: 'reportFalseArea',
+        params: req.params,
+        requestId: req.id,
+      });
+
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error',
+        message: 'Failed to report smoking area',
       });
     }
   }

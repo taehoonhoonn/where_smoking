@@ -47,12 +47,14 @@ class DatabaseManager:
         CREATE TABLE IF NOT EXISTS smoking_areas (
             id SERIAL PRIMARY KEY,
             category VARCHAR(20) NOT NULL,
+            submitted_category VARCHAR(20),
             address TEXT NOT NULL,
             detail TEXT,
             postal_code VARCHAR(10),
             longitude DECIMAL(10, 7) NOT NULL,
             latitude DECIMAL(10, 7) NOT NULL,
             status VARCHAR(10) DEFAULT 'active',
+            report_count INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
@@ -87,11 +89,13 @@ class DatabaseManager:
         SELECT
             id,
             category,
+            submitted_category,
             address,
             detail,
             postal_code,
             longitude,
             latitude,
+            report_count,
             created_at
         FROM smoking_areas
         WHERE status = 'active';
@@ -164,19 +168,21 @@ class DatabaseManager:
             for _, row in valid_data.iterrows():
                 insert_sql = """
                 INSERT INTO smoking_areas (
-                    category, address, detail, postal_code,
-                    longitude, latitude, status
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    category, submitted_category, address, detail, postal_code,
+                    longitude, latitude, status, report_count
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """
 
                 cursor.execute(insert_sql, (
-                    row['카테고리'],
+                    row['카테고리'] if row['카테고리'] in ['공공데이타', '시민제보'] else '공공데이타',
+                    None,
                     row['주소'],
                     row['상세'],
                     row['우편번호_수정'],
                     float(row['kakao_longitude']),
                     float(row['kakao_latitude']),
-                    'active'
+                    'active',
+                    0
                 ))
                 insert_count += 1
 
@@ -201,16 +207,16 @@ class DatabaseManager:
             cursor.execute("""
                 SELECT
                     COUNT(*) as total_count,
-                    COUNT(CASE WHEN category = '부분 개방형' THEN 1 END) as partial_open,
-                    COUNT(CASE WHEN category = '완전 폐쇄형' THEN 1 END) as fully_closed
+                    COUNT(CASE WHEN category = '공공데이타' THEN 1 END) as public_data,
+                    COUNT(CASE WHEN category = '시민제보' THEN 1 END) as citizen_reports
                 FROM smoking_areas
                 WHERE status = 'active'
             """)
 
             stats = cursor.fetchone()
             print(f"  📋 총 흡연구역: {stats[0]}개")
-            print(f"  🌬️ 부분 개방형: {stats[1]}개")
-            print(f"  🏢 완전 폐쇄형: {stats[2]}개")
+            print(f"  🗂️ 공공데이타: {stats[1]}개")
+            print(f"  🙋 시민제보: {stats[2]}개")
 
             # 지역별 통계
             cursor.execute("""
@@ -278,8 +284,8 @@ class DatabaseManager:
             cursor = self.connection.cursor()
             cursor.execute("""
                 SELECT
-                    id, category, address, detail, postal_code,
-                    longitude, latitude, created_at
+                    id, category, submitted_category, address, detail, postal_code,
+                    longitude, latitude, report_count, created_at
                 FROM active_smoking_areas
                 ORDER BY id
             """)
@@ -300,14 +306,16 @@ class DatabaseManager:
                 area_data = {
                     'id': row[0],
                     'category': row[1],
-                    'address': row[2],
-                    'detail': row[3],
-                    'postal_code': row[4],
+                    'submitted_category': row[2],
+                    'address': row[3],
+                    'detail': row[4],
+                    'postal_code': row[5],
                     'coordinates': {
-                        'longitude': float(row[5]),
-                        'latitude': float(row[6])
+                        'longitude': float(row[6]),
+                        'latitude': float(row[7])
                     },
-                    'created_at': row[7].isoformat() if row[7] else None
+                    'report_count': int(row[8]) if row[8] is not None else 0,
+                    'created_at': row[9].isoformat() if row[9] else None
                 }
                 export_data['smoking_areas'].append(area_data)
 

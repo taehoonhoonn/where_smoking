@@ -11,7 +11,7 @@
 
 ### 🌐 실행 중인 서비스
 ```
-✅ PostgreSQL 15        (28개 흡연구역 데이터)
+✅ PostgreSQL 15        (440개 흡연구역 데이터)
 ✅ Node.js API 서버     (http://localhost:3000)
 ✅ Flutter 웹 앱        (http://localhost:8080)
 ```
@@ -25,21 +25,17 @@
 
 ### 1단계: 데이터 수집 및 전처리 (✅ 완료)
 ```
-데이터 소스: 51개 지자체 CSV 파일 → 1,715개 주소 추출
+원천 CSV(공공데이터 469건) → 좌표 보유 188건 즉시 활용
 ↓
-Postcodify API 검증: 76.1% 성공률 (1,245/1,636개)
+좌표 미보유 281건 카카오 API 역지오코딩 → 실패 29건 기록
 ↓
-사용자 전처리: 36개 핵심 흡연구역 선별
-↓
-카카오 API 좌표 변환: 93.3% 성공률 (28/30개)
-↓
-최종 데이터: 28개 완전한 흡연구역 정보
+DB 적재용 최종 결과: 440건(모두 위도·경도 보유)
 ```
 
 **주요 파일:**
-- `scripts/add_coordinates.py` - 카카오 API 좌표 변환
-- `scripts/database_manager.py` - PostgreSQL 데이터 관리
-- `scripts/final_smoking_places_with_coordinates_20250920_192227.csv` - 최종 데이터
+- `scripts/reseed_from_raw.py` - 원시 CSV 전량 재적재 + 카카오 API 좌표 보완
+- `scripts/add_coordinates.py` - 개별 CSV 좌표 변환 도구(보조)
+- `scripts/database_manager.py` - PostgreSQL 스키마/재임포트 관리
 
 ### 2단계: 데이터베이스 구축 (✅ 완료)
 ```sql
@@ -50,12 +46,12 @@ sudo -u postgres createdb smoking_areas_db
 -- 테이블 생성 및 데이터 적재
 python3 database_manager.py setup
 
--- 결과: 28개 흡연구역 데이터 성공적 적재
+-- 결과: 440개 흡연구역 데이터 성공적 적재
 ```
 
 **데이터 분포:**
-- 부분 개방형: 14개, 완전 폐쇄형: 14개
-- 지역별: 성동구(10), 중구(7), 용산구(4), 노원구(4) 등
+- 카테고리: 공공데이타 440개 (시민제보 제보분은 승인 시 `시민제보`로 전환)
+- 지역별: 중구·용산구·성동구 등 서울 전역 440건 분포, 29건은 역지오코딩 실패 목록으로 별도 관리
 
 ### 3단계: API 서버 개발 (✅ 완료)
 ```javascript
@@ -77,6 +73,8 @@ api_server/
 - `GET /api/v1/smoking-areas/nearby?lat=37.5547&lng=126.9707` - 주변 검색 (하버사인 공식)
 - `GET /api/v1/smoking-areas/statistics` - 통계 정보 (카테고리별/지역별)
 - `GET /api/v1/smoking-areas/:id` - 특정 흡연구역 조회
+
+> 카테고리는 공공데이타/시민제보 두 갈래만 유지하며, 시민 제보 시 사용자가 선택한 유형은 `submitted_category`에 별도로 저장된다.
 
 ### 4단계: Flutter 앱 개발 (✅ 완료)
 

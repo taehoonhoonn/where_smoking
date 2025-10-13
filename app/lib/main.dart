@@ -45,10 +45,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
-      ),
+      body: IndexedStack(index: _currentIndex, children: _screens),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {
@@ -58,22 +55,13 @@ class _MainScreenState extends State<MainScreen> {
         },
         type: BottomNavigationBarType.fixed,
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.list),
-            label: '흡연구역',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.map),
-            label: '지도',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.list), label: '흡연구역'),
+          BottomNavigationBarItem(icon: Icon(Icons.map), label: '지도'),
           BottomNavigationBarItem(
             icon: Icon(Icons.admin_panel_settings),
             label: '관리자',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.api),
-            label: 'API 테스트',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.api), label: 'API 테스트'),
         ],
       ),
     );
@@ -114,14 +102,21 @@ class _SmokingAreaListScreenState extends State<SmokingAreaListScreen> {
         final data = json.decode(response.body);
         if (data['success'] == true) {
           setState(() {
-            _smokingAreas = data['smoking_areas'];
+            _smokingAreas = (data['smoking_areas'] as List<dynamic>).map((
+              area,
+            ) {
+              if (area is Map<String, dynamic>) {
+                return {...area, 'report_count': area['report_count'] ?? 0};
+              }
+              return area;
+            }).toList();
           });
         }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('데이터 로드 실패: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('데이터 로드 실패: $e')));
     }
 
     setState(() {
@@ -131,20 +126,28 @@ class _SmokingAreaListScreenState extends State<SmokingAreaListScreen> {
 
   List<dynamic> get _filteredAreas {
     if (_searchQuery.isEmpty) return _smokingAreas;
-    return _smokingAreas.where((area) =>
-      area['address'].toString().toLowerCase().contains(_searchQuery.toLowerCase()) ||
-      area['detail'].toString().toLowerCase().contains(_searchQuery.toLowerCase())
-    ).toList();
+    return _smokingAreas
+        .where(
+          (area) =>
+              area['address'].toString().toLowerCase().contains(
+                _searchQuery.toLowerCase(),
+              ) ||
+              area['detail'].toString().toLowerCase().contains(
+                _searchQuery.toLowerCase(),
+              ),
+        )
+        .toList();
   }
 
   // 현재 위치 기반 주변 검색
   void _searchNearbyAreas() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('현재 위치를 확인하는 중...')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('현재 위치를 확인하는 중...')));
 
     // Geolocation API를 사용하여 현재 위치 획득
-    js.context.callMethod('eval', ['''
+    js.context.callMethod('eval', [
+      '''
       if ('geolocation' in navigator) {
         navigator.geolocation.getCurrentPosition(
           function(position) {
@@ -191,17 +194,21 @@ class _SmokingAreaListScreenState extends State<SmokingAreaListScreen> {
           window.onNearbySearchError('이 브라우저는 위치 서비스를 지원하지 않습니다.');
         }
       }
-    ''']);
+    ''',
+    ]);
 
     // JavaScript 콜백 함수 등록
-    js.context['onNearbySearchSuccess'] = js.allowInterop((double lat, double lng) {
+    js.context['onNearbySearchSuccess'] = js.allowInterop((
+      double lat,
+      double lng,
+    ) {
       _fetchNearbyAreas(lat, lng);
     });
 
     js.context['onNearbySearchError'] = js.allowInterop((String errorMessage) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('위치 확인 실패: $errorMessage')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('위치 확인 실패: $errorMessage')));
     });
   }
 
@@ -209,7 +216,9 @@ class _SmokingAreaListScreenState extends State<SmokingAreaListScreen> {
   Future<void> _fetchNearbyAreas(double lat, double lng) async {
     try {
       final response = await http.get(
-        Uri.parse('$_baseUrl/smoking-areas/nearby?lat=$lat&lng=$lng&radius=2000&limit=20'),
+        Uri.parse(
+          '$_baseUrl/smoking-areas/nearby?lat=$lat&lng=$lng&radius=2000&limit=20',
+        ),
         headers: {'Content-Type': 'application/json'},
       );
 
@@ -238,10 +247,7 @@ class _SmokingAreaListScreenState extends State<SmokingAreaListScreen> {
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('주변 검색 실패: $e'),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text('주변 검색 실패: $e'), backgroundColor: Colors.red),
       );
     }
   }
@@ -286,6 +292,10 @@ class _SmokingAreaListScreenState extends State<SmokingAreaListScreen> {
                 itemCount: _filteredAreas.length,
                 itemBuilder: (context, index) {
                   final area = _filteredAreas[index];
+                  final bool isCitizen = area['category'] == '시민제보';
+                  final int reportCount = area['report_count'] is int
+                      ? area['report_count'] as int
+                      : int.tryParse('${area['report_count'] ?? 0}') ?? 0;
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
                     elevation: 2,
@@ -295,16 +305,16 @@ class _SmokingAreaListScreenState extends State<SmokingAreaListScreen> {
                         width: 50,
                         height: 50,
                         decoration: BoxDecoration(
-                          color: area['category'] == '완전 폐쇄형'
-                              ? Colors.blue.shade100
-                              : Colors.green.shade100,
+                          color: isCitizen
+                              ? const Color(0xFFFFF7D6)
+                              : Colors.blue.shade100,
                           borderRadius: BorderRadius.circular(25),
                         ),
                         child: Icon(
                           Icons.smoking_rooms,
-                          color: area['category'] == '완전 폐쇄형'
-                              ? Colors.blue
-                              : Colors.green,
+                          color: isCitizen
+                              ? const Color(0xFFF59E0B)
+                              : Colors.blue,
                         ),
                       ),
                       title: Text(
@@ -331,9 +341,9 @@ class _SmokingAreaListScreenState extends State<SmokingAreaListScreen> {
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: area['category'] == '완전 폐쇄형'
-                                      ? Colors.blue
-                                      : Colors.green,
+                                  color: isCitizen
+                                      ? const Color(0xFFF59E0B)
+                                      : Colors.blue,
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
@@ -345,6 +355,26 @@ class _SmokingAreaListScreenState extends State<SmokingAreaListScreen> {
                                   ),
                                 ),
                               ),
+                              const SizedBox(width: 12),
+                              if (reportCount > 0)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.redAccent.shade100,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    '신고 $reportCount회',
+                                    style: TextStyle(
+                                      color: Colors.red.shade700,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
                               const Spacer(),
                               Text(
                                 area['postal_code'] ?? '',
@@ -362,7 +392,9 @@ class _SmokingAreaListScreenState extends State<SmokingAreaListScreen> {
                         onPressed: () {
                           // 길찾기 기능 (나중에 구현)
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('길찾기 기능은 추후 구현 예정입니다.')),
+                            const SnackBar(
+                              content: Text('길찾기 기능은 추후 구현 예정입니다.'),
+                            ),
                           );
                         },
                       ),
@@ -450,7 +482,9 @@ class _ApiTestScreenState extends State<ApiTestScreen> {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['success'] == true) {
-          _log('✅ 전체 조회 성공: ${data['count']}개 중 ${data['smoking_areas'].length}개 조회');
+          _log(
+            '✅ 전체 조회 성공: ${data['count']}개 중 ${data['smoking_areas'].length}개 조회',
+          );
           for (var area in data['smoking_areas'].take(3)) {
             _log('  📍 ${area['category']} - ${area['address']}');
           }
@@ -477,7 +511,9 @@ class _ApiTestScreenState extends State<ApiTestScreen> {
     try {
       _log('🔍 주변 검색 테스트 시작 (서울역 주변)...');
       final response = await http.get(
-        Uri.parse('$_baseUrl/smoking-areas/nearby?lat=37.5547&lng=126.9707&radius=2000&limit=5'),
+        Uri.parse(
+          '$_baseUrl/smoking-areas/nearby?lat=37.5547&lng=126.9707&radius=2000&limit=5',
+        ),
         headers: {'Content-Type': 'application/json'},
       );
 
@@ -606,7 +642,10 @@ class _ApiTestScreenState extends State<ApiTestScreen> {
                     children: [
                       const Text(
                         '테스트 결과',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       if (_isLoading) ...[
                         const SizedBox(width: 16),

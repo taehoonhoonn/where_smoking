@@ -12,7 +12,67 @@ class MapScreen extends StatefulWidget {
   State<MapScreen> createState() => _MapScreenState();
 }
 
-class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
+class _MarkerLegendPainter extends CustomPainter {
+  _MarkerLegendPainter({
+    required this.fillColor,
+    required this.borderColor,
+    required this.innerColor,
+  });
+
+  final Color fillColor;
+  final Color borderColor;
+  final Color innerColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path()
+      ..moveTo(size.width / 2, size.height)
+      ..cubicTo(
+        size.width * 0.82,
+        size.height * 0.75,
+        size.width,
+        size.height * 0.5,
+        size.width,
+        size.height * 0.35,
+      )
+      ..arcToPoint(
+        Offset(0, size.height * 0.35),
+        radius: Radius.circular(size.width),
+        clockwise: false,
+      )
+      ..cubicTo(
+        0,
+        size.height * 0.5,
+        size.width * 0.18,
+        size.height * 0.75,
+        size.width / 2,
+        size.height,
+      )
+      ..close();
+
+    final fillPaint = Paint()..color = fillColor;
+    canvas.drawPath(path, fillPaint);
+
+    final borderPaint = Paint()
+      ..color = borderColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    canvas.drawPath(path, borderPaint);
+
+    final innerRadius = size.width * 0.22;
+    canvas.drawCircle(
+      Offset(size.width / 2, size.height * 0.38),
+      innerRadius,
+      Paint()..color = innerColor,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _MapScreenState extends State<MapScreen>
+    with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
   final String _baseUrl = 'http://localhost:3000/api/v1';
   bool _isLoading = false;
   String _statusMessage = '지도를 로드하는 중...';
@@ -20,6 +80,22 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
   bool _isDialogShowing = false;
   int? _currentViewId;
   bool _wasInBackground = false;
+  String? _adminToken;
+  bool _isAdminMode = false;
+  static const String _citizenMarkerSvg =
+      '''<div style="width:28px;height:40px;display:flex;align-items:flex-start;justify-content:center;">
+  <svg width="28" height="40" viewBox="0 0 28 40" xmlns="http://www.w3.org/2000/svg">
+    <path d="M14 1C7.21 1 2 6.21 2 13c0 10.07 12 24.75 12 24.75S26 23.07 26 13C26 6.21 20.79 1 14 1z" fill="#FACC15" stroke="#C08900" stroke-width="2"/>
+    <circle cx="14" cy="13" r="5" fill="#FFFFFF"/>
+  </svg>
+</div>''';
+  static final String _citizenMarkerSvgContent = _citizenMarkerSvg
+      .replaceAll('\r', '')
+      .replaceAll('\n', '')
+      .replaceAll("'", "\\'");
+
+  bool get _hasAdminAccess =>
+      _adminToken != null && _adminToken!.trim().isNotEmpty;
 
   @override
   bool get wantKeepAlive => true;
@@ -28,6 +104,7 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _loadAdminToken();
     _registerMapWidget();
     _loadSmokingAreas();
   }
@@ -37,7 +114,8 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
     super.didChangeAppLifecycleState(state);
     print('앱 상태 변화: $state');
 
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
       _wasInBackground = true;
       print('지도 탭이 백그라운드로 이동');
     } else if (state == AppLifecycleState.resumed && _wasInBackground) {
@@ -55,37 +133,306 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
     }
   }
 
-  void _registerMapWidget() {
-    // HTML 요소를 위한 고유 뷰 타입 등록
-    ui.platformViewRegistry.registerViewFactory(
-      'naver-map',
-      (int viewId) {
-        final mapContainer = html.DivElement()
-          ..id = 'naver-map-$viewId'
-          ..style.width = '100%'
-          ..style.height = '100%'
-          ..style.border = 'none'
-          ..style.backgroundColor = '#f0f0f0';
+  void _loadAdminToken() {
+    try {
+      if (js.context.hasProperty('ADMIN_ACCESS_TOKEN')) {
+        final tokenValue = js.context['ADMIN_ACCESS_TOKEN'];
+        if (tokenValue is String && tokenValue.trim().isNotEmpty) {
+          _adminToken = tokenValue.trim();
+          _registerDeleteInterop();
+          return;
+        }
+      }
 
-        // 디버깅을 위한 로그
-        print('지도 컨테이너 생성: naver-map-$viewId');
+      _adminToken = null;
+      js.context['flutterDeleteSmokingArea'] = null;
+    } catch (error) {
+      print('관리자 토큰 로드 실패: $error');
+      _adminToken = null;
+    }
+  }
 
-        // 지도 초기화를 위한 지연 실행 (더 긴 지연으로 변경)
-        Future.delayed(const Duration(milliseconds: 500), () {
-          print('지도 초기화 시작: $viewId');
-          _createNaverMap(viewId);
-        });
+  void _registerDeleteInterop() {
+    if (!_hasAdminAccess) {
+      return;
+    }
 
-        return mapContainer;
+    js.context['flutterDeleteSmokingArea'] = js.allowInterop((dynamic rawId) {
+      final parsedId = rawId is num ? rawId.toInt() : int.tryParse('$rawId');
+      if (parsedId == null) {
+        return;
+      }
+
+      if (!_isAdminMode || !_hasAdminAccess) {
+        return;
+      }
+
+      _confirmDeleteArea(parsedId);
+    });
+  }
+
+  void _toggleAdminMode() {
+    if (!_hasAdminAccess) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('관리자 토큰이 설정되지 않았습니다.'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        _isAdminMode = !_isAdminMode;
+        _statusMessage = _isAdminMode
+            ? '관리자 모드가 활성화되었습니다.'
+            : '관리자 모드가 비활성화되었습니다.';
+      });
+    } else {
+      _isAdminMode = !_isAdminMode;
+    }
+
+    if (_currentViewId != null) {
+      _addMarkersToMap(_currentViewId!);
+    }
+  }
+
+  Future<void> _confirmDeleteArea(int areaId) async {
+    if (!mounted) return;
+
+    dynamic targetArea;
+    try {
+      targetArea = _smokingAreas.firstWhere(
+        (area) => area is Map && area['id'] == areaId,
+      );
+    } catch (_) {
+      targetArea = null;
+    }
+
+    final address = targetArea is Map
+        ? (targetArea['address']?.toString() ?? '')
+        : '';
+    final detail = targetArea is Map
+        ? (targetArea['detail']?.toString() ?? '')
+        : '';
+    final displayName = detail.trim().isEmpty ? address : detail.trim();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('흡연구역 삭제'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('선택한 흡연구역을 지도에서 제거하시겠습니까?'),
+              const SizedBox(height: 12),
+              if (displayName.isNotEmpty)
+                Text(
+                  displayName,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              if (address.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  address,
+                  style: const TextStyle(fontSize: 13, color: Colors.grey),
+                ),
+              ],
+              const SizedBox(height: 16),
+              const Text(
+                '삭제된 흡연구역은 목록에서 숨겨지며 다시 복구하려면 수동으로 등록해야 합니다.',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('취소'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('삭제'),
+            ),
+          ],
+        );
       },
     );
+
+    if (confirmed == true) {
+      await _deleteSmokingArea(areaId);
+    }
+  }
+
+  Future<void> _deleteSmokingArea(int areaId) async {
+    if (!_hasAdminAccess) {
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        _statusMessage = '흡연구역을 삭제하는 중...';
+      });
+    }
+
+    try {
+      final response = await http.delete(
+        Uri.parse('$_baseUrl/smoking-areas/$areaId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Token': _adminToken!,
+        },
+      );
+
+      final Map<String, dynamic>? body = response.body.isNotEmpty
+          ? json.decode(response.body) as Map<String, dynamic>
+          : null;
+
+      if (response.statusCode == 200 && body?['success'] == true) {
+        if (mounted) {
+          setState(() {
+            _smokingAreas = _smokingAreas.where((area) {
+              if (area is Map<String, dynamic>) {
+                return area['id'] != areaId;
+              }
+              return true;
+            }).toList();
+            _statusMessage = '흡연구역이 삭제되었습니다.';
+          });
+        } else {
+          _smokingAreas = _smokingAreas.where((area) {
+            if (area is Map<String, dynamic>) {
+              return area['id'] != areaId;
+            }
+            return true;
+          }).toList();
+        }
+
+        if (_currentViewId != null) {
+          _addMarkersToMap(_currentViewId!);
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('흡연구역을 삭제했습니다.'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+
+        return;
+      }
+
+      final errorMessage = body?['message']?.toString() ?? '삭제에 실패했습니다.';
+
+      if (mounted) {
+        setState(() {
+          _statusMessage = '삭제 실패: $errorMessage';
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('삭제 실패: $errorMessage'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _statusMessage = '삭제 중 오류가 발생했습니다: $error';
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('삭제 중 오류가 발생했습니다: $error'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  String _escapeHtml(String value) {
+    return value
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+  }
+
+  String _buildInfoWindowContent({
+    required String title,
+    required String address,
+    required int areaId,
+  }) {
+    final safeTitle = _escapeHtml(title);
+    final safeAddress = _escapeHtml(address);
+
+    final buffer = StringBuffer()
+      ..write('<div style="padding: 15px; max-width: 300px;">')
+      ..write(
+        '<h4 style="margin: 0 0 10px 0; color: #1f2937; font-size: 16px;">$safeTitle</h4>',
+      )
+      ..write(
+        '<p style="margin: 0 0 12px 0; color: #4b5563; font-size: 14px;"><strong>주소:</strong> $safeAddress</p>',
+      )
+      ..write('<div style="display:flex;gap:8px;flex-wrap:wrap;">')
+      ..write(
+        '<button style="padding: 8px 12px; background-color: #F97316; border: none; border-radius: 6px; color: white; font-size: 13px; cursor: pointer;" onclick="if(window.flutterReportFalseLocation){window.flutterReportFalseLocation($areaId);}">허위 장소 신고하기</button>',
+      );
+
+    if (_isAdminMode && _hasAdminAccess) {
+      buffer.write(
+        '<button style="padding: 8px 12px; background-color: #DC2626; border: none; border-radius: 6px; color: white; font-size: 13px; cursor: pointer;" onclick="if(window.flutterDeleteSmokingArea){window.flutterDeleteSmokingArea($areaId);}">지도에서 삭제</button>',
+      );
+    }
+
+    buffer.write('</div></div>');
+    return buffer.toString();
+  }
+
+  void _registerMapWidget() {
+    // HTML 요소를 위한 고유 뷰 타입 등록
+    ui.platformViewRegistry.registerViewFactory('naver-map', (int viewId) {
+      final mapContainer = html.DivElement()
+        ..id = 'naver-map-$viewId'
+        ..style.width = '100%'
+        ..style.height = '100%'
+        ..style.border = 'none'
+        ..style.backgroundColor = '#f0f0f0';
+
+      // 디버깅을 위한 로그
+      print('지도 컨테이너 생성: naver-map-$viewId');
+
+      // 지도 초기화를 위한 지연 실행 (더 긴 지연으로 변경)
+      Future.delayed(const Duration(milliseconds: 500), () {
+        print('지도 초기화 시작: $viewId');
+        _createNaverMap(viewId);
+      });
+
+      return mapContainer;
+    });
   }
 
   void _createNaverMap(int viewId) {
     final containerId = 'naver-map-$viewId';
     print('네이버 지도 생성 시도: $containerId');
 
-    js.context.callMethod('eval', ['''
+    js.context.callMethod('eval', [
+      '''
       function initNaverMap_$viewId() {
         console.log('지도 초기화 함수 실행:', '$containerId');
 
@@ -282,10 +629,13 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
 
       // 초기화 함수 실행
       initNaverMap_$viewId();
-    ''']);
+    ''',
+    ]);
 
     // Flutter 콜백 함수 등록 (viewId별 고유 콜백)
-    js.context['flutter_naver_map_loaded_$viewId'] = js.allowInterop((int loadedViewId) {
+    js.context['flutter_naver_map_loaded_$viewId'] = js.allowInterop((
+      int loadedViewId,
+    ) {
       print('지도 로드 완료 콜백: $loadedViewId (등록된 viewId: $viewId)');
       if (mounted && loadedViewId == viewId) {
         _currentViewId = loadedViewId;
@@ -305,7 +655,9 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
     });
 
     // 전역 콜백도 유지 (fallback)
-    js.context['flutter_naver_map_loaded'] = js.allowInterop((int loadedViewId) {
+    js.context['flutter_naver_map_loaded'] = js.allowInterop((
+      int loadedViewId,
+    ) {
       print('전역 지도 로드 완료 콜백: $loadedViewId');
       if (mounted) {
         _currentViewId = loadedViewId;
@@ -318,12 +670,101 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
     // 우클릭 콜백 함수 제거됨 (모바일 앱에서는 길게 누르기만 사용)
 
     // 길게 누르기 콜백 함수 등록 (전역적으로 모든 viewId 처리)
-    js.context['flutter_map_longpress'] = js.allowInterop((int clickedViewId, double lat, double lng) {
+    js.context['flutter_map_longpress'] = js.allowInterop((
+      int clickedViewId,
+      double lat,
+      double lng,
+    ) {
       print('길게 누르기 콜백: $clickedViewId, $lat, $lng');
       if (mounted) {
         _showAddLocationDialog(lat, lng);
       }
     });
+
+    js.context['flutterReportFalseLocation'] = js.allowInterop((
+      dynamic areaId,
+    ) {
+      if (!mounted) {
+        return;
+      }
+      _reportFalseLocation(areaId);
+    });
+  }
+
+  Future<void> _reportFalseLocation(dynamic areaId) async {
+    final int? id = areaId is int ? areaId : int.tryParse(areaId.toString());
+
+    if (id == null) {
+      return;
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/smoking-areas/$id/report'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final dynamic rawCount = data['smoking_area']?['report_count'];
+        final int reportCount = rawCount is int
+            ? rawCount
+            : int.tryParse(rawCount?.toString() ?? '') ?? 0;
+
+        if (mounted) {
+          setState(() {
+            _smokingAreas = _smokingAreas.map((area) {
+              if (area is Map<String, dynamic> && area['id'] == id) {
+                return {...area, 'report_count': reportCount};
+              }
+              return area;
+            }).toList();
+          });
+
+          _forceRefreshMarkers();
+
+          if (_currentViewId != null) {
+            js.context.callMethod('eval', [
+              '''
+              if (window.naverMapInfoWindows_${_currentViewId}) {
+                window.naverMapInfoWindows_${_currentViewId}.forEach(function(iw) {
+                  if (iw.getMap()) {
+                    iw.close();
+                  }
+                });
+              }
+              ''',
+            ]);
+          }
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('신고가 접수되었습니다. (총 ${reportCount}회)'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('신고 처리 실패: ${response.statusCode}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('신고 처리 중 오류가 발생했습니다: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _loadSmokingAreas() async {
@@ -345,7 +786,14 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
         if (data['success'] == true) {
           if (mounted) {
             setState(() {
-              _smokingAreas = data['smoking_areas'];
+              _smokingAreas = (data['smoking_areas'] as List<dynamic>).map((
+                area,
+              ) {
+                if (area is Map<String, dynamic>) {
+                  return {...area, 'report_count': area['report_count'] ?? 0};
+                }
+                return area;
+              }).toList();
               _statusMessage = '${_smokingAreas.length}개의 흡연구역을 찾았습니다.';
             });
 
@@ -385,7 +833,8 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
     print('마커 추가 시작: ${_smokingAreas.length}개');
 
     // 기존 마커 제거
-    js.context.callMethod('eval', ['''
+    js.context.callMethod('eval', [
+      '''
       console.log('기존 마커 제거 시작');
       if (window.$markersVar && window.$markersVar.length > 0) {
         window.$markersVar.forEach(function(marker) {
@@ -402,40 +851,54 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
       if (!window.naverMapInfoWindows_$viewId) {
         window.naverMapInfoWindows_$viewId = [];
       }
-    ''']);
+    ''',
+    ]);
 
     // 모든 마커를 한 번에 생성
     for (int i = 0; i < _smokingAreas.length; i++) {
       final area = _smokingAreas[i];
+      final id = area['id'];
       final lat = area['coordinates']['latitude'];
       final lng = area['coordinates']['longitude'];
       final address = area['address'];
       final category = area['category'];
-      final detail = area['detail'] ?? '상세 정보 없음';
+      final detailValue = (area['detail'] as String?)?.trim() ?? '';
+      final infoTitleSource = detailValue.isEmpty ? address : detailValue;
+      final infoWindowContent = _buildInfoWindowContent(
+        title: infoTitleSource,
+        address: address,
+        areaId: id,
+      );
+      final encodedInfoWindowContent = json.encode(infoWindowContent);
+      final encodedCategory = json.encode(category);
+      final encodedAddressForLog = json.encode(address);
 
-      // JavaScript 문자열에서 따옴표 처리
-      final safeAddress = address.replaceAll("'", "\\'").replaceAll('"', '\\"');
-      final safeCategory = category.replaceAll("'", "\\'").replaceAll('"', '\\"');
-      final safeDetail = detail.replaceAll("'", "\\'").replaceAll('"', '\\"');
-
-      js.context.callMethod('eval', ['''
+      js.context.callMethod('eval', [
+        '''
         if (window.$mapVar) {
           try {
-            // 마커 생성
-            var marker_$i = new naver.maps.Marker({
+            var category = $encodedCategory;
+            var markerOptions_$i = {
               position: new naver.maps.LatLng($lat, $lng),
               map: window.$mapVar
-            });
+            };
+
+            if (category === '시민제보') {
+              markerOptions_$i.icon = {
+                content: '$_citizenMarkerSvgContent',
+                anchor: new naver.maps.Point(14, 40)
+              };
+            }
+
+            // 마커 생성
+            var marker_$i = new naver.maps.Marker(markerOptions_$i);
 
             window.$markersVar.push(marker_$i);
 
             // 각 마커마다 고유한 정보창 생성
+            var infoWindowContent_$i = $encodedInfoWindowContent;
             var infoWindow_$i = new naver.maps.InfoWindow({
-              content: '<div style="padding: 15px; max-width: 300px;">' +
-                       '<h4 style="margin: 0 0 10px 0; color: #333;">$safeCategory</h4>' +
-                       '<p style="margin: 0 0 8px 0; color: #666; font-size: 14px;"><strong>주소:</strong> $safeAddress</p>' +
-                       '<p style="margin: 0; color: #666; font-size: 14px;"><strong>상세:</strong> $safeDetail</p>' +
-                       '</div>'
+              content: infoWindowContent_$i
             });
 
             // InfoWindow 배열에 저장
@@ -453,21 +916,23 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
 
                 // 현재 InfoWindow 열기
                 currentInfoWindow.open(window.$mapVar, marker_$i);
-                console.log('InfoWindow $i 열림:', '$safeAddress');
+                console.log('InfoWindow $i 열림:', $encodedAddressForLog);
               };
             })(infoWindow_$i));
 
-            console.log('마커 $i 생성 완료:', '$safeAddress');
+            console.log('마커 $i 생성 완료:', $encodedAddressForLog);
 
           } catch (error) {
             console.error('마커 $i 생성 오류:', error);
           }
         }
-      ''']);
+      ''',
+      ]);
     }
 
     // 모든 마커가 보이도록 지도 범위 조정
-    js.context.callMethod('eval', ['''
+    js.context.callMethod('eval', [
+      '''
       console.log('지도 범위 조정 시작, 마커 개수:', window.$markersVar.length);
       if (window.$mapVar && window.$markersVar && window.$markersVar.length > 0) {
         var bounds = new naver.maps.LatLngBounds();
@@ -477,7 +942,8 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
         window.$mapVar.fitBounds(bounds, {top: 50, right: 50, bottom: 50, left: 50});
         console.log('지도 범위 조정 완료');
       }
-    ''']);
+    ''',
+    ]);
 
     if (mounted) {
       setState(() {
@@ -488,12 +954,14 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
 
   Future<void> _searchNearby() async {
     // 현재 지도 중심 좌표 가져오기
-    final centerInfo = js.context.callMethod('eval', ['''
+    final centerInfo = js.context.callMethod('eval', [
+      '''
       if (window.naverMap) {
         var center = window.naverMap.getCenter();
         JSON.stringify({lat: center.lat(), lng: center.lng()});
       }
-    ''']);
+    ''',
+    ]);
 
     if (centerInfo != null) {
       final center = json.decode(centerInfo);
@@ -507,7 +975,9 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
 
       try {
         final response = await http.get(
-          Uri.parse('$_baseUrl/smoking-areas/nearby?lat=${center['lat']}&lng=${center['lng']}&radius=2000&limit=20'),
+          Uri.parse(
+            '$_baseUrl/smoking-areas/nearby?lat=${center['lat']}&lng=${center['lng']}&radius=2000&limit=20',
+          ),
           headers: {'Content-Type': 'application/json'},
         );
 
@@ -516,7 +986,8 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
           if (data['success'] == true) {
             if (mounted) {
               setState(() {
-                _statusMessage = '주변 ${data['smoking_areas'].length}개의 흡연구역을 찾았습니다.';
+                _statusMessage =
+                    '주변 ${data['smoking_areas'].length}개의 흡연구역을 찾았습니다.';
               });
             }
           }
@@ -545,6 +1016,24 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
     }
   }
 
+  Widget _buildLegendMarker({
+    required Color fillColor,
+    required Color borderColor,
+    Color innerColor = Colors.white,
+  }) {
+    return SizedBox(
+      width: 20,
+      height: 28,
+      child: CustomPaint(
+        painter: _MarkerLegendPainter(
+          fillColor: fillColor,
+          borderColor: borderColor,
+          innerColor: innerColor,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context); // AutomaticKeepAliveClientMixin 필수
@@ -555,6 +1044,17 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
         actions: [
+          if (_hasAdminAccess)
+            IconButton(
+              icon: Icon(
+                _isAdminMode
+                    ? Icons.admin_panel_settings
+                    : Icons.admin_panel_settings_outlined,
+              ),
+              color: _isAdminMode ? Colors.amberAccent : null,
+              onPressed: _toggleAdminMode,
+              tooltip: _isAdminMode ? '관리자 모드 비활성화' : '관리자 모드 활성화',
+            ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadSmokingAreas,
@@ -576,167 +1076,156 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
         children: [
           Column(
             children: [
-          // 상태 표시 바
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.blue.shade50,
-              border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
-            ),
-            child: Row(
-              children: [
-                if (_isLoading) ...[
-                  const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                  const SizedBox(width: 12),
-                ],
-                Expanded(
-                  child: Text(
-                    _statusMessage,
-                    style: const TextStyle(fontSize: 14),
+              // 상태 표시 바
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  border: Border(
+                    bottom: BorderSide(color: Colors.grey.shade300),
                   ),
                 ),
-              ],
-            ),
-          ),
-
-          // 지도 영역
-          Expanded(
-            child: Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-              child: Stack(
-                children: [
-                  const HtmlElementView(viewType: 'naver-map'),
-                  // 마커 로드 상태 표시 오버레이
-                  if (_smokingAreas.isNotEmpty)
-                    Positioned(
-                      top: 10,
-                      right: 10,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.green.withOpacity(0.9),
-                          borderRadius: BorderRadius.circular(15),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.location_on, color: Colors.white, size: 16),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${_smokingAreas.length}개 마커 로드됨',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
+                child: Row(
+                  children: [
+                    if (_isLoading) ...[
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      const SizedBox(width: 12),
+                    ],
+                    Expanded(
+                      child: Text(
+                        _statusMessage,
+                        style: const TextStyle(fontSize: 14),
                       ),
                     ),
-                ],
-              ),
-            ),
-          ),
-
-          // 하단 정보 패널
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border(top: BorderSide(color: Colors.grey.shade300)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 4,
-                  offset: const Offset(0, -2),
+                  ],
                 ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  '범례',
+              ),
+
+              // 지도 영역
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Stack(
+                    children: [
+                      const HtmlElementView(viewType: 'naver-map'),
+                      // 마커 로드 상태 표시 오버레이
+                      if (_smokingAreas.isNotEmpty)
+                        Positioned(
+                          top: 10,
+                          right: 10,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.9),
+                              borderRadius: BorderRadius.circular(15),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.location_on,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${_smokingAreas.length}개 마커 로드됨',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // 하단 정보 패널
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border(top: BorderSide(color: Colors.grey.shade300)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 4,
+                      offset: const Offset(0, -2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '범례',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        _buildLegendMarker(
+                          fillColor: const Color(0xFF2563EB),
+                          borderColor: const Color(0xFF1D4ED8),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text('공공데이타'),
+                        const SizedBox(width: 24),
+                        _buildLegendMarker(
+                          fillColor: const Color(0xFFFACC15),
+                          borderColor: const Color(0xFFC08900),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text('시민제보'),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          // 다이얼로그가 열릴 때 지도 클릭 방지를 위한 오버레이
+          if (_isDialogShowing)
+            Container(
+              color: Colors.black.withOpacity(0.3),
+              child: const Center(
+                child: Text(
+                  '흡연구역 등록 중...',
                   style: TextStyle(
-                    fontSize: 16,
+                    color: Colors.white,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Container(
-                      width: 20,
-                      height: 20,
-                      decoration: BoxDecoration(
-                        color: Colors.green,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: const Center(
-                        child: Text(
-                          '🚬',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    const Text('부분 개방형'),
-                    const SizedBox(width: 24),
-                    Container(
-                      width: 20,
-                      height: 20,
-                      decoration: BoxDecoration(
-                        color: Colors.blue,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: const Center(
-                        child: Text(
-                          '🚬',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    const Text('완전 폐쇄형'),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          ],
-        ),
-        // 다이얼로그가 열릴 때 지도 클릭 방지를 위한 오버레이
-        if (_isDialogShowing)
-          Container(
-            color: Colors.black.withOpacity(0.3),
-            child: const Center(
-              child: Text(
-                '흡연구역 등록 중...',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
               ),
             ),
-          ),
-      ],
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _moveToMyLocation,
@@ -756,7 +1245,8 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
     }
 
     // Geolocation API를 사용하여 현재 위치 획득
-    js.context.callMethod('eval', ['''
+    js.context.callMethod('eval', [
+      '''
       if ('geolocation' in navigator) {
         navigator.geolocation.getCurrentPosition(
           function(position) {
@@ -847,10 +1337,15 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
           window.onLocationError('이 브라우저는 위치 서비스를 지원하지 않습니다.');
         }
       }
-    ''']);
+    ''',
+    ]);
 
     // JavaScript 콜백 함수 등록
-    js.context['onLocationSuccess'] = js.allowInterop((double lat, double lng, double accuracy) {
+    js.context['onLocationSuccess'] = js.allowInterop((
+      double lat,
+      double lng,
+      double accuracy,
+    ) {
       // mounted 체크로 위젯이 여전히 트리에 있는지 확인
       if (mounted) {
         setState(() {
@@ -876,7 +1371,9 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
   Future<void> _searchNearbyAreas(double lat, double lng) async {
     try {
       final response = await http.get(
-        Uri.parse('$_baseUrl/smoking-areas/nearby?lat=$lat&lng=$lng&radius=1000&limit=10'),
+        Uri.parse(
+          '$_baseUrl/smoking-areas/nearby?lat=$lat&lng=$lng&radius=1000&limit=10',
+        ),
         headers: {'Content-Type': 'application/json'},
       );
 
@@ -903,22 +1400,26 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
     _isDialogShowing = false;
 
     // 지도 이벤트 다시 활성화
-    js.context.callMethod('eval', ['''
+    js.context.callMethod('eval', [
+      '''
       // 모든 지도 컨테이너의 포인터 이벤트 활성화
       var mapContainers = document.querySelectorAll('[id^="naver-map-"]');
       mapContainers.forEach(function(container) {
         container.style.pointerEvents = 'auto';
         console.log('지도 이벤트 활성화:', container.id);
       });
-    ''']);
+    ''',
+    ]);
 
     // JavaScript 전역 플래그도 리셋
-    js.context.callMethod('eval', ['''
+    js.context.callMethod('eval', [
+      '''
       window.isLocationDialogShowing = false;
       // 버튼 클릭 시 즉시 다시 길게 누르기 가능하도록 타임스탬프 조정
       window.lastLongPressTime = Date.now() - 2500; // 2.5초 전으로 설정
       console.log('다이얼로그 완전 리셋: 길게 누르기 다시 활성화');
-    ''']);
+    ''',
+    ]);
   }
 
   void _showAddLocationDialog(double lat, double lng) async {
@@ -931,14 +1432,16 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
     _isDialogShowing = true;
 
     // 지도 이벤트 완전히 비활성화
-    js.context.callMethod('eval', ['''
+    js.context.callMethod('eval', [
+      '''
       // 모든 지도 컨테이너의 포인터 이벤트 비활성화
       var mapContainers = document.querySelectorAll('[id^="naver-map-"]');
       mapContainers.forEach(function(container) {
         container.style.pointerEvents = 'none';
         console.log('지도 이벤트 비활성화:', container.id);
       });
-    ''']);
+    ''',
+    ]);
 
     // 먼저 확인 다이얼로그 표시
     bool? confirm = await showDialog<bool>(
@@ -946,7 +1449,9 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('흡연구역 등록'),
-          content: Text('이 위치에 새로운 흡연구역을 등록하시겠습니까?\n\n위치: ${lat.toStringAsFixed(6)}, ${lng.toStringAsFixed(6)}'),
+          content: Text(
+            '이 위치에 새로운 흡연구역을 등록하시겠습니까?\n\n위치: ${lat.toStringAsFixed(6)}, ${lng.toStringAsFixed(6)}',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
@@ -976,7 +1481,6 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
     _isDialogShowing = true;
 
     final TextEditingController detailController = TextEditingController();
-    String selectedCategory = '부분 개방형';
 
     showDialog(
       context: context,
@@ -990,29 +1494,45 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('위치 정보', style: TextStyle(fontWeight: FontWeight.bold)),
-                    Text('좌표: ${lat.toStringAsFixed(6)}, ${lng.toStringAsFixed(6)}'),
-                    const SizedBox(height: 16),
-
-                    const Text('카테고리', style: TextStyle(fontWeight: FontWeight.bold)),
-                    DropdownButton<String>(
-                      value: selectedCategory,
-                      isExpanded: true,
-                      items: const [
-                        DropdownMenuItem(value: '부분 개방형', child: Text('부분 개방형')),
-                        DropdownMenuItem(value: '완전 폐쇄형', child: Text('완전 폐쇄형')),
-                      ],
-                      onChanged: (String? value) {
-                        if (value != null) {
-                          setState(() {
-                            selectedCategory = value;
-                          });
-                        }
-                      },
+                    const Text(
+                      '위치 정보',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      '좌표: ${lat.toStringAsFixed(6)}, ${lng.toStringAsFixed(6)}',
                     ),
                     const SizedBox(height: 16),
 
-                    const Text('상세 설명 (선택사항)', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const Text(
+                      '등록 유형',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.deepOrange.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.deepOrange.shade200),
+                      ),
+                      child: const Text(
+                        '시민제보',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.deepOrange,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    const Text(
+                      '상세 설명 (선택사항)',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     TextField(
                       controller: detailController,
                       maxLines: 3,
@@ -1039,7 +1559,7 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    _submitNewLocation(lat, lng, selectedCategory, detailController.text);
+                    _submitNewLocation(lat, lng, detailController.text);
                     Navigator.of(context).pop();
                     _resetDialogState(); // 등록 신청 시 다이얼로그 상태 리셋
                   },
@@ -1054,7 +1574,7 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
   }
 
   // 새 장소 등록 API 호출
-  Future<void> _submitNewLocation(double lat, double lng, String category, String detail) async {
+  Future<void> _submitNewLocation(double lat, double lng, String detail) async {
     if (mounted) {
       setState(() {
         _isLoading = true;
@@ -1069,7 +1589,6 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
         body: json.encode({
           'latitude': lat,
           'longitude': lng,
-          'category': category,
           'detail': detail.isEmpty ? null : detail,
         }),
       );
@@ -1102,10 +1621,7 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('등록 실패: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('등록 실패: $e'), backgroundColor: Colors.red),
         );
       }
     }
@@ -1126,6 +1642,8 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
     js.context['onLocationError'] = null;
     js.context['flutter_naver_map_loaded'] = null;
     js.context['flutter_map_longpress'] = null;
+    js.context['flutterReportFalseLocation'] = null;
+    js.context['flutterDeleteSmokingArea'] = null;
 
     // viewId별 콜백도 정리
     if (_currentViewId != null) {
@@ -1134,5 +1652,4 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
 
     super.dispose();
   }
-
 }

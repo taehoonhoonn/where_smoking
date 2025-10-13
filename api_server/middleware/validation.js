@@ -44,10 +44,10 @@ const idSchema = Joi.object({
 
 // 카테고리 검증 스키마
 const categorySchema = Joi.object({
-  category: Joi.string().valid('부분 개방형', '완전 폐쇄형').required()
+  category: Joi.string().valid('공공데이타', '시민제보').required()
     .messages({
       'string.base': '카테고리는 문자열이어야 합니다',
-      'any.only': '카테고리는 "부분 개방형" 또는 "완전 폐쇄형"이어야 합니다',
+      'any.only': '카테고리는 "공공데이타" 또는 "시민제보"여야 합니다',
       'any.required': '카테고리는 필수입니다',
     }),
 });

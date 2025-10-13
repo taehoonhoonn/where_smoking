@@ -5,6 +5,7 @@ const {
   validateId,
   validateCategory,
 } = require('../middleware/validation');
+const requireAdminAuth = require('../middleware/adminAuth');
 const { debugLogger } = require('../config/logger');
 
 const router = express.Router();
@@ -52,8 +53,8 @@ router.get('/nearby', validateLocation, SmokingAreaController.getNearbyAreas);
  * @route   GET /api/v1/smoking-areas/category/:category
  * @desc    카테고리별 흡연구역 조회
  * @access  Public
- * @param   {string} category - 흡연구역 카테고리 (부분 개방형, 완전 폐쇄형)
- * @example GET /api/v1/smoking-areas/category/부분 개방형
+ * @param   {string} category - 흡연구역 카테고리 (공공데이타, 시민제보)
+ * @example GET /api/v1/smoking-areas/category/시민제보
  */
 router.get('/category/:category', validateCategory, SmokingAreaController.getAreasByCategory);
 
@@ -63,7 +64,7 @@ router.get('/category/:category', validateCategory, SmokingAreaController.getAre
  * @access  Admin
  * @example GET /api/v1/smoking-areas/pending
  */
-router.get('/pending', SmokingAreaController.getPendingAreas);
+router.get('/pending', requireAdminAuth, SmokingAreaController.getPendingAreas);
 
 /**
  * @route   GET /api/v1/smoking-areas/statistics
@@ -79,15 +80,31 @@ router.get('/statistics', SmokingAreaController.getStatistics);
  * @access  Admin
  * @example PATCH /api/v1/smoking-areas/123/approve
  */
-router.patch('/:id/approve', validateId, SmokingAreaController.approveArea);
+router.patch('/:id/approve', validateId, requireAdminAuth, SmokingAreaController.approveArea);
 
 /**
  * @route   DELETE /api/v1/smoking-areas/:id/reject
  * @desc    흡연구역 거부 (관리자용)
  * @access  Admin
  * @example DELETE /api/v1/smoking-areas/123/reject
+*/
+router.delete('/:id/reject', validateId, requireAdminAuth, SmokingAreaController.rejectArea);
+
+/**
+ * @route   DELETE /api/v1/smoking-areas/:id
+ * @desc    활성화된 흡연구역 삭제 (관리자용)
+ * @access  Admin
+ * @example DELETE /api/v1/smoking-areas/123
  */
-router.delete('/:id/reject', validateId, SmokingAreaController.rejectArea);
+router.delete('/:id', validateId, requireAdminAuth, SmokingAreaController.deleteArea);
+
+/**
+ * @route   POST /api/v1/smoking-areas/:id/report
+ * @desc    허위 장소 신고 접수
+ * @access  Public
+ * @example POST /api/v1/smoking-areas/123/report
+ */
+router.post('/:id/report', validateId, SmokingAreaController.reportFalseArea);
 
 /**
  * @route   GET /api/v1/smoking-areas/:id
