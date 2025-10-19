@@ -42,12 +42,24 @@
         return;
       }
 
-      const script = document.createElement('script');
-      script.type = 'text/javascript';
-      script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${mapKey}&submodules=geocoder`;
-      document.head.appendChild(script);
+      const scriptId = 'naver-map-script';
+      if (document.getElementById(scriptId)) {
+        return;
+      }
+
+      const scriptEl = document.createElement('script');
+      scriptEl.id = scriptId;
+      scriptEl.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${mapKey}&submodules=geocoder,markerclusterer`;
+      scriptEl.async = false;
+      scriptEl.defer = false;
+      scriptEl.onerror = function (event) {
+        console.error('Failed to load Naver Maps script.', event);
+      };
+
+      document.head.appendChild(scriptEl);
     })();
   </script>
+  <script src="flutter_marker_renderer.js"></script>
   <link rel="manifest" href="manifest.json">
 </head>
 <body>

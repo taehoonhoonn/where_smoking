@@ -1,0 +1,105 @@
+{
+  "timestamp": "2025-10-18T11:35:22.891385",
+  "total_rows": 197,
+  "successes": 189,
+  "api_calls": 166,
+  "reused_coordinates": 31,
+  "failures": [
+    {
+      "index": 10,
+      "query": "센트럴시티 호남선 출입구 옆",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 32,
+      "query": "강남대로30길 7",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 33,
+      "query": "남부순환로 2636",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 71,
+      "query": "서울특별시 성동구 성수동1가 686-709",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 89,
+      "query": "경상북도 안동시 풍천면 도청대로 456",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 91,
+      "query": "경상북도 안동시 풍천면 도청대로 456",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 105,
+      "query": "서울시 강북구 한천로 1289",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 151,
+      "query": "경상북도 청도군 청도읍 신기길 78-10",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    }
+  ]
+}

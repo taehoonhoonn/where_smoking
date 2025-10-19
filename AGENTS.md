@@ -7,6 +7,11 @@
 - `old/`: Archived experiments. Do not rely on this for active development unless explicitly resurrecting legacy work.
 - Root-level `AGENTS.md` (this file) and `app/AGENTS.md` capture contributor guardrails—update both when workflows change.
 
+## Data Ingestion Workflow
+- 기본 재적재는 `python3 scripts/reseed_from_raw.py` (replace 모드, 테이블을 `TRUNCATE` 후 전량 삽입)로 수행합니다.
+- 공공데이터 추가분만 누적하려면 `python3 scripts/reseed_from_raw.py --mode append --csv <새 CSV 경로>`를 사용합니다. `append`는 주소+상세(소문자, 공백 트림) 조합이 이미 존재하면 건너뜁니다.
+- 새 CSV는 `scripts/.env`에 설정된 Kakao API 키를 기반으로 지오코딩하며, 실패 건은 `failed_geocoding_*.json`으로 남습니다.
+
 ## Build, Test, and Development Commands
 - `cd api_server && npm install`: Install API dependencies.
 - `cd api_server && npm start`: Launch the REST API on `http://localhost:3000` (requires PostgreSQL running at `localhost:5432`). Export vars via `.env` created from `.env.example` first.

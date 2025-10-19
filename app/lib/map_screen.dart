@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'dart:async';
 import 'dart:convert';
 import 'dart:html' as html;
 import 'dart:js' as js;
+import 'dart:math' as math;
 import 'dart:ui_web' as ui;
 
 class MapScreen extends StatefulWidget {
@@ -71,9 +73,25 @@ class _MarkerLegendPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
+class _ViewportRequest {
+  const _ViewportRequest({
+    required this.centerLat,
+    required this.centerLng,
+    required this.radiusMeters,
+    required this.zoom,
+  });
+
+  final double centerLat;
+  final double centerLng;
+  final double radiusMeters;
+  final double zoom;
+}
+
 class _MapScreenState extends State<MapScreen>
     with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
   final String _baseUrl = 'http://localhost:3000/api/v1';
+  static const double _defaultCenterLat = 37.5666805;
+  static const double _defaultCenterLng = 126.9784147;
   bool _isLoading = false;
   String _statusMessage = '지도를 로드하는 중...';
   List<dynamic> _smokingAreas = [];
@@ -82,6 +100,26 @@ class _MapScreenState extends State<MapScreen>
   bool _wasInBackground = false;
   String? _adminToken;
   bool _isAdminMode = false;
+  bool _markerRendererScriptReady = false;
+  Timer? _viewportDebounceTimer;
+  bool _isViewportFetchInProgress = false;
+  _ViewportRequest? _pendingViewportRequest;
+  bool _pendingViewportForce = false;
+  _ViewportRequest? _lastSuccessfulViewport;
+  double? _lastFetchedCenterLat;
+  double? _lastFetchedCenterLng;
+  double? _lastFetchedRadius;
+  double? _lastFetchedZoom;
+  DateTime? _lastViewportFetchAt;
+  bool _hasCompletedInitialFetch = false;
+  bool _initialLocationFetchDone = false;
+  double? _pendingCenterLat;
+  double? _pendingCenterLng;
+  double? _pendingCenterZoom;
+  Timer? _rendererReadyTimer;
+  int _rendererReadyAttempts = 0;
+  int? _pendingMarkerRenderViewId;
+  bool _markerRendererScriptInjectionRequested = false;
   static const String _citizenMarkerSvg =
       '''<div style="width:28px;height:40px;display:flex;align-items:flex-start;justify-content:center;">
   <svg width="28" height="40" viewBox="0 0 28 40" xmlns="http://www.w3.org/2000/svg">
@@ -106,7 +144,22 @@ class _MapScreenState extends State<MapScreen>
     WidgetsBinding.instance.addObserver(this);
     _loadAdminToken();
     _registerMapWidget();
-    _loadSmokingAreas();
+    js.context['flutterMapViewportChanged'] =
+        js.allowInterop((dynamic payload) {
+      if (payload == null) {
+        return;
+      }
+      try {
+        final String jsonPayload =
+            payload is String ? payload : payload.toString();
+        _handleViewportPayload(jsonPayload);
+      } catch (error) {
+        print('뷰포트 데이터 수신 오류: $error');
+      }
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _moveToMyLocation();
+    });
   }
 
   @override
@@ -121,15 +174,20 @@ class _MapScreenState extends State<MapScreen>
     } else if (state == AppLifecycleState.resumed && _wasInBackground) {
       _wasInBackground = false;
       print('지도 탭이 포그라운드로 복귀, 마커 재생성 필요');
-      // 지도가 이미 로드되어 있고 데이터가 있으면 마커 재생성
-      if (_currentViewId != null && _smokingAreas.isNotEmpty) {
-        Future.delayed(const Duration(milliseconds: 1000), () {
-          if (mounted) {
-            print('앱 복귀 후 마커 재생성 실행: ${_smokingAreas.length}개');
-            _addMarkersToMap(_currentViewId!);
-          }
-        });
-      }
+      Future.delayed(const Duration(milliseconds: 600), () {
+        if (!mounted) {
+          return;
+        }
+
+        if (_currentViewId != null && _smokingAreas.isNotEmpty) {
+          print('앱 복귀 후 마커 재생성 실행: ${_smokingAreas.length}개');
+          _addMarkersToMap(_currentViewId!);
+        }
+
+        if (_lastSuccessfulViewport != null) {
+          _requestViewportFetch(_lastSuccessfulViewport!, force: true);
+        }
+      });
     }
   }
 
@@ -512,6 +570,42 @@ class _MapScreenState extends State<MapScreen>
               }
             });
 
+            // 지도 이동/확대 후 뷰포트 정보 전달
+            naver.maps.Event.addListener(window.naverMap_$viewId, 'idle', function() {
+              if (!window.flutterMapViewportChanged) {
+                return;
+              }
+
+              try {
+                var mapInstance = window.naverMap_$viewId;
+                var bounds = mapInstance.getBounds();
+                if (!bounds) {
+                  return;
+                }
+
+                var payload = JSON.stringify({
+                  viewId: $viewId,
+                  zoom: mapInstance.getZoom(),
+                  center: {
+                    lat: mapInstance.getCenter().lat(),
+                    lng: mapInstance.getCenter().lng()
+                  },
+                  northEast: {
+                    lat: bounds.getNE().lat(),
+                    lng: bounds.getNE().lng()
+                  },
+                  southWest: {
+                    lat: bounds.getSW().lat(),
+                    lng: bounds.getSW().lng()
+                  }
+                });
+
+                window.flutterMapViewportChanged(payload);
+              } catch (viewportError) {
+                console.error('뷰포트 정보 전송 실패:', viewportError);
+              }
+            });
+
             // 길게 누르기 이벤트 리스너 추가 (모바일용)
             var longPressTimer = null;
             var longPressStartPos = null;
@@ -640,8 +734,10 @@ class _MapScreenState extends State<MapScreen>
       if (mounted && loadedViewId == viewId) {
         _currentViewId = loadedViewId;
         setState(() {
-          _statusMessage = '지도 로드 완료. 흡연구역을 표시하는 중...';
+          _statusMessage = '지도 로드 완료. 현재 위치를 찾고 있습니다...';
         });
+
+        _flushPendingCenterIfNeeded();
 
         // 데이터가 이미 로드되어 있으면 즉시 마커 추가
         if (_smokingAreas.isNotEmpty) {
@@ -661,6 +757,10 @@ class _MapScreenState extends State<MapScreen>
       print('전역 지도 로드 완료 콜백: $loadedViewId');
       if (mounted) {
         _currentViewId = loadedViewId;
+        setState(() {
+          _statusMessage = '지도 로드 완료. 현재 위치를 찾고 있습니다...';
+        });
+        _flushPendingCenterIfNeeded();
         if (_smokingAreas.isNotEmpty) {
           _addMarkersToMap(loadedViewId);
         }
@@ -767,183 +867,480 @@ class _MapScreenState extends State<MapScreen>
     }
   }
 
-  Future<void> _loadSmokingAreas() async {
-    if (mounted) {
-      setState(() {
-        _isLoading = true;
-        _statusMessage = '흡연구역 데이터를 불러오는 중...';
-      });
+  void _handleViewportPayload(String payload, {bool force = false}) {
+    if (!mounted) {
+      return;
     }
 
     try {
+      final Map<String, dynamic> data =
+          json.decode(payload) as Map<String, dynamic>;
+      final Map<String, dynamic>? center =
+          data['center'] as Map<String, dynamic>?;
+      final Map<String, dynamic>? northEast =
+          data['northEast'] as Map<String, dynamic>?;
+      final Map<String, dynamic>? southWest =
+          data['southWest'] as Map<String, dynamic>?;
+      final double zoom = (data['zoom'] as num?)?.toDouble() ?? 0;
+
+      if (center == null || northEast == null || southWest == null) {
+        return;
+      }
+
+      final double centerLat = (center['lat'] as num).toDouble();
+      final double centerLng = (center['lng'] as num).toDouble();
+      final double radiusMeters = _calculateViewportRadiusMeters(
+        (northEast['lat'] as num).toDouble(),
+        (northEast['lng'] as num).toDouble(),
+        (southWest['lat'] as num).toDouble(),
+        (southWest['lng'] as num).toDouble(),
+      );
+
+      final _ViewportRequest request = _ViewportRequest(
+        centerLat: centerLat,
+        centerLng: centerLng,
+        radiusMeters: radiusMeters,
+        zoom: zoom,
+      );
+
+      _scheduleViewportFetch(request, force: force);
+    } catch (error) {
+      print('뷰포트 데이터 파싱 실패: $error');
+    }
+  }
+
+  void _scheduleViewportFetch(_ViewportRequest request, {bool force = false}) {
+    if (force) {
+      _viewportDebounceTimer?.cancel();
+      _viewportDebounceTimer = null;
+      _requestViewportFetch(request, force: true);
+      return;
+    }
+    _viewportDebounceTimer?.cancel();
+    _viewportDebounceTimer = Timer(
+      const Duration(milliseconds: 350),
+      () => _requestViewportFetch(request),
+    );
+  }
+
+  void _requestViewportFetch(_ViewportRequest request, {bool force = false}) {
+    if (!mounted) {
+      return;
+    }
+
+    if (_isViewportFetchInProgress) {
+      _pendingViewportRequest = request;
+      _pendingViewportForce = force || _pendingViewportForce;
+      return;
+    }
+
+    if (_shouldSkipFetch(request, force: force)) {
+      return;
+    }
+
+    _isViewportFetchInProgress = true;
+    _pendingViewportRequest = null;
+    _pendingViewportForce = false;
+
+    _fetchAreasForViewport(request, force: force).whenComplete(() {
+      _isViewportFetchInProgress = false;
+
+      if (_pendingViewportRequest != null) {
+        final _ViewportRequest pending = _pendingViewportRequest!;
+        final bool pendingForce = _pendingViewportForce;
+        _pendingViewportRequest = null;
+        _pendingViewportForce = false;
+        _requestViewportFetch(pending, force: pendingForce);
+      }
+    });
+  }
+
+  bool _shouldSkipFetch(_ViewportRequest request, {bool force = false}) {
+    if (force || !_hasCompletedInitialFetch) {
+      return false;
+    }
+
+    if (_lastViewportFetchAt != null &&
+        DateTime.now().difference(_lastViewportFetchAt!).inMilliseconds <
+            400) {
+      return true;
+    }
+
+    if (_lastFetchedCenterLat == null ||
+        _lastFetchedCenterLng == null ||
+        _lastFetchedRadius == null ||
+        _lastFetchedZoom == null) {
+      return false;
+    }
+
+    final double effectiveRadius =
+        request.radiusMeters.clamp(250.0, 10000.0);
+    final double moveDistance = _distanceBetweenMeters(
+      request.centerLat,
+      request.centerLng,
+      _lastFetchedCenterLat!,
+      _lastFetchedCenterLng!,
+    );
+    final double radiusDifference =
+        (effectiveRadius - _lastFetchedRadius!).abs();
+    final double zoomDifference =
+        (request.zoom - _lastFetchedZoom!).abs();
+
+    final double movementThreshold = math.max(effectiveRadius * 0.25, 200);
+    final double radiusThreshold = math.max(effectiveRadius * 0.2, 150);
+
+    if (moveDistance < movementThreshold &&
+        radiusDifference < radiusThreshold &&
+        zoomDifference < 0.8) {
+      return true;
+    }
+
+    return false;
+  }
+
+  Future<void> _fetchAreasForViewport(_ViewportRequest request,
+      {bool force = false}) async {
+    final bool showLoading = !_hasCompletedInitialFetch;
+
+    if (mounted && showLoading) {
+      setState(() {
+        _isLoading = true;
+        _statusMessage = '주변 흡연구역을 불러오는 중...';
+      });
+    } else if (mounted && force) {
+      setState(() {
+        _statusMessage = '지도를 새로고침하는 중...';
+      });
+    }
+
+    final int radius =
+        request.radiusMeters.clamp(250.0, 10000.0).round();
+    final int limit = _estimateFetchLimit(request.zoom, radius);
+
+    final uri = Uri.parse(
+      '$_baseUrl/smoking-areas/nearby?lat=${request.centerLat}&lng=${request.centerLng}&radius=$radius&limit=$limit',
+    );
+
+    try {
       final response = await http.get(
-        Uri.parse('$_baseUrl/smoking-areas'),
+        uri,
         headers: {'Content-Type': 'application/json'},
       );
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+        final Map<String, dynamic> data =
+            json.decode(response.body) as Map<String, dynamic>;
+
         if (data['success'] == true) {
+          final List<dynamic> rawAreas =
+              data['smoking_areas'] as List<dynamic>? ?? <dynamic>[];
+          final List<Map<String, dynamic>> normalizedAreas = rawAreas
+              .map<Map<String, dynamic>>((dynamic area) {
+                final mapArea =
+                    Map<String, dynamic>.from(area as Map<dynamic, dynamic>);
+                mapArea['report_count'] = mapArea['report_count'] ?? 0;
+                return mapArea;
+              })
+              .toList();
+
           if (mounted) {
             setState(() {
-              _smokingAreas = (data['smoking_areas'] as List<dynamic>).map((
-                area,
-              ) {
-                if (area is Map<String, dynamic>) {
-                  return {...area, 'report_count': area['report_count'] ?? 0};
-                }
-                return area;
-              }).toList();
-              _statusMessage = '${_smokingAreas.length}개의 흡연구역을 찾았습니다.';
+              _smokingAreas = normalizedAreas;
+              _statusMessage = normalizedAreas.isEmpty
+                  ? '현재 지도 범위에서 표시할 흡연구역이 없습니다.'
+                  : '현재 지도 범위에서 ${normalizedAreas.length}개의 흡연구역을 표시합니다.';
+              if (showLoading) {
+                _isLoading = false;
+              }
             });
-
-            // 데이터 로딩 완료 후 현재 지도에 마커 추가
-            if (_currentViewId != null) {
-              print('데이터 로딩 완료, 현재 지도에 마커 추가: viewId $_currentViewId');
-              Future.delayed(const Duration(milliseconds: 200), () {
-                if (mounted) {
-                  _addMarkersToMap(_currentViewId!);
-                }
-              });
-            }
           }
+
+          if (_currentViewId != null) {
+            _addMarkersToMap(_currentViewId!);
+          }
+
+          _lastFetchedCenterLat = request.centerLat;
+          _lastFetchedCenterLng = request.centerLng;
+          _lastFetchedRadius = radius.toDouble();
+          _lastFetchedZoom = request.zoom;
+          _lastViewportFetchAt = DateTime.now();
+          _lastSuccessfulViewport = request;
+          _hasCompletedInitialFetch = true;
+        } else {
+          _handleViewportFetchError('데이터를 불러오지 못했습니다.');
         }
+      } else {
+        _handleViewportFetchError(
+          '(${response.statusCode}) 주변 데이터를 불러오지 못했습니다.',
+        );
       }
-    } catch (e) {
-      if (mounted) {
+    } catch (error) {
+      _handleViewportFetchError('네트워크 오류가 발생했습니다: $error');
+    } finally {
+      if (mounted && showLoading) {
         setState(() {
-          _statusMessage = '데이터 로드 실패: $e';
+          _isLoading = false;
         });
       }
     }
+  }
 
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
+  void _handleViewportFetchError(String message) {
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _statusMessage = message;
+      _isLoading = false;
+    });
+  }
+
+  double _calculateViewportRadiusMeters(
+    double northEastLat,
+    double northEastLng,
+    double southWestLat,
+    double southWestLng,
+  ) {
+    final double diagonal = _distanceBetweenMeters(
+      northEastLat,
+      northEastLng,
+      southWestLat,
+      southWestLng,
+    );
+
+    final double radius = diagonal / 2;
+    if (radius.isNaN || !radius.isFinite || radius <= 0) {
+      return 600;
+    }
+
+    return radius;
+  }
+
+  double _distanceBetweenMeters(
+    double lat1,
+    double lng1,
+    double lat2,
+    double lng2,
+  ) {
+    const double earthRadius = 6371000;
+    final double dLat = _degToRad(lat2 - lat1);
+    final double dLng = _degToRad(lng2 - lng1);
+    final double a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(_degToRad(lat1)) *
+            math.cos(_degToRad(lat2)) *
+            math.sin(dLng / 2) *
+            math.sin(dLng / 2);
+    final double c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    return earthRadius * c;
+  }
+
+  double _degToRad(double degrees) => degrees * math.pi / 180.0;
+
+  int _estimateFetchLimit(double zoom, int radiusMeters) {
+    if (zoom >= 16) {
+      return 70;
+    }
+    if (zoom >= 14) {
+      return 80;
+    }
+    if (zoom >= 12) {
+      return 90;
+    }
+    return math.min(100, math.max(40, (radiusMeters / 120).round()));
+  }
+
+  void _refreshVisibleAreas() {
+    _fetchCurrentViewport(force: true);
+  }
+
+  bool _fetchCurrentViewport({bool force = false}) {
+    if (_currentViewId == null) {
+      print('뷰포트 정보를 가져올 수 없습니다: 활성화된 viewId가 없습니다.');
+      if (force && mounted) {
+        setState(() {
+          _statusMessage = '지도 준비 후 다시 시도해주세요.';
+        });
+      }
+      return false;
+    }
+
+    final int viewId = _currentViewId!;
+    final dynamic payload = js.context.callMethod('eval', [
+      '''
+      (function() {
+        var map = window.naverMap_$viewId;
+        if (!map || typeof map.getBounds !== 'function') {
+          return null;
+        }
+        var bounds = map.getBounds();
+        if (!bounds) {
+          return null;
+        }
+        var center = map.getCenter();
+        return JSON.stringify({
+          viewId: $viewId,
+          zoom: map.getZoom(),
+          center: { lat: center.lat(), lng: center.lng() },
+          northEast: { lat: bounds.getNE().lat(), lng: bounds.getNE().lng() },
+          southWest: { lat: bounds.getSW().lat(), lng: bounds.getSW().lng() }
+        });
+      })();
+      '''
+    ]);
+
+    if (payload == null) {
+      print('뷰포트 정보를 가져오지 못했습니다.');
+      if (force && mounted) {
+        setState(() {
+          _statusMessage = '현재 지도 범위를 확인할 수 없습니다. 잠시 후 다시 시도해주세요.';
+        });
+      }
+      return false;
+    }
+
+    final String payloadString = payload is String ? payload : '$payload';
+    if (payloadString.isEmpty || payloadString == 'null') {
+      print('뷰포트 정보가 비어 있습니다.');
+      return false;
+    }
+
+    _handleViewportPayload(payloadString, force: force);
+    return true;
+  }
+
+  void _ensureMarkerRendererScript() {
+    if (_markerRendererScriptReady) {
+      return;
+    }
+
+    if (js.context.hasProperty('flutterRenderSmokingMarkers') &&
+        js.context['flutterRenderSmokingMarkers'] != null) {
+      _onMarkerRendererReady();
+      return;
+    }
+
+    if (!_markerRendererScriptInjectionRequested) {
+      _injectMarkerRendererScript();
+    }
+
+    if (_rendererReadyTimer == null) {
+      _rendererReadyAttempts = 0;
+      _rendererReadyTimer = Timer.periodic(
+        const Duration(milliseconds: 250),
+        (timer) {
+          if (js.context.hasProperty('flutterRenderSmokingMarkers') &&
+              js.context['flutterRenderSmokingMarkers'] != null) {
+            _onMarkerRendererReady();
+            timer.cancel();
+            _rendererReadyTimer = null;
+            _rendererReadyAttempts = 0;
+            return;
+          }
+
+          _rendererReadyAttempts += 1;
+          if (_rendererReadyAttempts >= 40) {
+            print('flutterRenderSmokingMarkers 전역 함수 로드를 기다리는 중입니다... 스크립트를 다시 불러옵니다.');
+            _rendererReadyAttempts = 0;
+            _injectMarkerRendererScript(force: true);
+          }
+        },
+      );
+    }
+  }
+
+  void _onMarkerRendererReady() {
+    _markerRendererScriptReady = true;
+    _rendererReadyTimer?.cancel();
+    _rendererReadyTimer = null;
+    _rendererReadyAttempts = 0;
+    if (_pendingMarkerRenderViewId != null) {
+      final int pendingViewId = _pendingMarkerRenderViewId!;
+      _pendingMarkerRenderViewId = null;
+      scheduleMicrotask(() {
+        if (mounted) {
+          _addMarkersToMap(pendingViewId);
+        }
       });
     }
+  }
+
+  void _injectMarkerRendererScript({bool force = false}) {
+    final String baseSrc = 'flutter_marker_renderer.js';
+    final String src = force
+        ? '$baseSrc?retry=' + DateTime.now().millisecondsSinceEpoch.toString()
+        : baseSrc;
+
+    final script = html.ScriptElement()
+      ..type = 'text/javascript'
+      ..async = false
+      ..defer = false
+      ..src = src;
+
+    script.onLoad.listen((event) {
+      print('flutter_marker_renderer.js 로드 완료');
+      _onMarkerRendererReady();
+    });
+
+    script.onError.listen((event) {
+      print('flutter_marker_renderer.js 로드 실패: $event');
+    });
+
+    html.document.head?.append(script);
+    _markerRendererScriptInjectionRequested = true;
   }
 
   void _addMarkersToMap(int viewId) {
     if (_smokingAreas.isEmpty) return;
 
-    final mapVar = 'naverMap_$viewId';
-    final markersVar = 'naverMapMarkers_$viewId';
+    print('마커 추가 시작: ' + _smokingAreas.length.toString() + '개');
 
-    print('마커 추가 시작: ${_smokingAreas.length}개');
+    _ensureMarkerRendererScript();
 
-    // 기존 마커 제거
-    js.context.callMethod('eval', [
-      '''
-      console.log('기존 마커 제거 시작');
-      if (window.$markersVar && window.$markersVar.length > 0) {
-        window.$markersVar.forEach(function(marker) {
-          marker.setMap(null);
-        });
-        window.$markersVar = [];
-        console.log('기존 마커 제거 완료');
-      }
-      if (!window.$markersVar) {
-        window.$markersVar = [];
-      }
-
-      // InfoWindow 배열도 초기화
-      if (!window.naverMapInfoWindows_$viewId) {
-        window.naverMapInfoWindows_$viewId = [];
-      }
-    ''',
-    ]);
-
-    // 모든 마커를 한 번에 생성
-    for (int i = 0; i < _smokingAreas.length; i++) {
-      final area = _smokingAreas[i];
-      final id = area['id'];
-      final lat = area['coordinates']['latitude'];
-      final lng = area['coordinates']['longitude'];
-      final address = area['address'];
-      final category = area['category'];
-      final detailValue = (area['detail'] as String?)?.trim() ?? '';
-      final infoTitleSource = detailValue.isEmpty ? address : detailValue;
-      final infoWindowContent = _buildInfoWindowContent(
-        title: infoTitleSource,
-        address: address,
-        areaId: id,
-      );
-      final encodedInfoWindowContent = json.encode(infoWindowContent);
-      final encodedCategory = json.encode(category);
-      final encodedAddressForLog = json.encode(address);
-
-      js.context.callMethod('eval', [
-        '''
-        if (window.$mapVar) {
-          try {
-            var category = $encodedCategory;
-            var markerOptions_$i = {
-              position: new naver.maps.LatLng($lat, $lng),
-              map: window.$mapVar
-            };
-
-            if (category === '시민제보') {
-              markerOptions_$i.icon = {
-                content: '$_citizenMarkerSvgContent',
-                anchor: new naver.maps.Point(14, 40)
-              };
-            }
-
-            // 마커 생성
-            var marker_$i = new naver.maps.Marker(markerOptions_$i);
-
-            window.$markersVar.push(marker_$i);
-
-            // 각 마커마다 고유한 정보창 생성
-            var infoWindowContent_$i = $encodedInfoWindowContent;
-            var infoWindow_$i = new naver.maps.InfoWindow({
-              content: infoWindowContent_$i
-            });
-
-            // InfoWindow 배열에 저장
-            window.naverMapInfoWindows_$viewId.push(infoWindow_$i);
-
-            // 클릭 이벤트 추가 (클로저로 현재 InfoWindow 캡처)
-            naver.maps.Event.addListener(marker_$i, 'click', (function(currentInfoWindow) {
-              return function() {
-                // 다른 모든 InfoWindow 닫기
-                window.naverMapInfoWindows_$viewId.forEach(function(iw) {
-                  if (iw.getMap()) {
-                    iw.close();
-                  }
-                });
-
-                // 현재 InfoWindow 열기
-                currentInfoWindow.open(window.$mapVar, marker_$i);
-                console.log('InfoWindow $i 열림:', $encodedAddressForLog);
-              };
-            })(infoWindow_$i));
-
-            console.log('마커 $i 생성 완료:', $encodedAddressForLog);
-
-          } catch (error) {
-            console.error('마커 $i 생성 오류:', error);
-          }
-        }
-      ''',
-      ]);
+    if (!js.context.hasProperty('flutterRenderSmokingMarkers') ||
+        js.context['flutterRenderSmokingMarkers'] == null) {
+      print('마커 렌더링 스크립트를 찾지 못했습니다. 마커 생성을 건너뜁니다.');
+      _pendingMarkerRenderViewId = viewId;
+      return;
     }
 
-    // 모든 마커가 보이도록 지도 범위 조정
-    js.context.callMethod('eval', [
-      '''
-      console.log('지도 범위 조정 시작, 마커 개수:', window.$markersVar.length);
-      if (window.$mapVar && window.$markersVar && window.$markersVar.length > 0) {
-        var bounds = new naver.maps.LatLngBounds();
-        window.$markersVar.forEach(function(marker) {
-          bounds.extend(marker.getPosition());
-        });
-        window.$mapVar.fitBounds(bounds, {top: 50, right: 50, bottom: 50, left: 50});
-        console.log('지도 범위 조정 완료');
-      }
-    ''',
-    ]);
+    _pendingMarkerRenderViewId = null;
+
+    final markerPayload = _smokingAreas.map((area) {
+      final id = area['id'];
+      final address = area['address'];
+      final category = area['category'];
+      final lat = area['coordinates']['latitude'];
+      final lng = area['coordinates']['longitude'];
+      final detailValue = (area['detail'] as String?)?.trim() ?? '';
+      final infoTitleSource = detailValue.isEmpty ? address : detailValue;
+
+      return {
+        'id': id,
+        'lat': lat,
+        'lng': lng,
+        'address': address,
+        'detail': detailValue,
+        'category': category,
+        'infoWindowContent': _buildInfoWindowContent(
+          title: infoTitleSource,
+          address: address,
+          areaId: id,
+        ),
+      };
+    }).toList();
+
+    final config = js.JsObject.jsify({
+      'viewId': viewId,
+      'markers': markerPayload,
+      'citizenMarkerSvg': _citizenMarkerSvgContent,
+    });
+
+    try {
+      js.context.callMethod('flutterRenderSmokingMarkers', [config]);
+    } catch (error) {
+      print('마커 렌더링 호출 실패: ' + error.toString());
+    }
 
     if (mounted) {
       setState(() {
@@ -1057,7 +1454,7 @@ class _MapScreenState extends State<MapScreen>
             ),
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _loadSmokingAreas,
+            onPressed: _refreshVisibleAreas,
             tooltip: '데이터 새로고침',
           ),
           IconButton(
@@ -1244,153 +1641,216 @@ class _MapScreenState extends State<MapScreen>
       });
     }
 
-    // Geolocation API를 사용하여 현재 위치 획득
-    js.context.callMethod('eval', [
-      '''
-      if ('geolocation' in navigator) {
-        navigator.geolocation.getCurrentPosition(
-          function(position) {
-            var lat = position.coords.latitude;
-            var lng = position.coords.longitude;
-            var accuracy = position.coords.accuracy;
+    final geolocation = html.window.navigator.geolocation;
+    if (geolocation == null) {
+      _handleLocationError('이 브라우저는 위치 서비스를 지원하지 않습니다.', fallback: true);
+      return;
+    }
 
-            console.log('현재 위치 획득 성공:', lat, lng, '정확도:', accuracy + 'm');
+    geolocation
+        .getCurrentPosition(enableHighAccuracy: true)
+        .then((html.Geoposition position) {
+      final coords = position.coords;
+      if (coords == null) {
+        _handleLocationError('위치 정보를 가져오지 못했습니다.', fallback: true);
+        return;
+      }
 
-            // 현재 활성화된 지도 찾기
-            var activeMap = null;
-            for (var prop in window) {
-              if (prop.startsWith('naverMap_') && window[prop]) {
-                activeMap = window[prop];
-                break;
-              }
-            }
-
-            if (activeMap) {
-              // 현재 위치로 지도 중심 이동
-              var currentPosition = new naver.maps.LatLng(lat, lng);
-              activeMap.setCenter(currentPosition);
-              activeMap.setZoom(16); // 조금 더 확대
-
-              // 기존 현재 위치 마커 제거
-              if (window.currentLocationMarker) {
-                window.currentLocationMarker.setMap(null);
-              }
-
-              // 현재 위치 마커 생성 (파란색 원형)
-              window.currentLocationMarker = new naver.maps.Marker({
-                position: currentPosition,
-                map: activeMap,
-                icon: {
-                  content: '<div style="width:20px;height:20px;background:#4285F4;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>',
-                  anchor: new naver.maps.Point(10, 10)
-                },
-                title: '현재 위치'
-              });
-
-              console.log('현재 위치 마커 표시 완료');
-            }
-
-            // Flutter에 성공 알림
-            window.flutter_inappwebview && window.flutter_inappwebview.callHandler('locationSuccess', {
-              latitude: lat,
-              longitude: lng,
-              accuracy: accuracy
-            });
-
-            // 전역 콜백으로 Flutter에 알림
-            if (window.onLocationSuccess) {
-              window.onLocationSuccess(lat, lng, accuracy);
-            }
-          },
-          function(error) {
-            console.error('위치 획득 실패:', error.message);
-            var errorMsg = '';
-            switch(error.code) {
-              case error.PERMISSION_DENIED:
-                errorMsg = '위치 접근 권한이 거부되었습니다.';
-                break;
-              case error.POSITION_UNAVAILABLE:
-                errorMsg = '위치 정보를 사용할 수 없습니다.';
-                break;
-              case error.TIMEOUT:
-                errorMsg = '위치 요청 시간이 초과되었습니다.';
-                break;
-              default:
-                errorMsg = '알 수 없는 오류가 발생했습니다.';
-                break;
-            }
-
-            // Flutter에 오류 알림
-            if (window.onLocationError) {
-              window.onLocationError(errorMsg);
-            }
-          },
-          {
-            enableHighAccuracy: true,  // GPS 사용으로 높은 정확도
-            timeout: 15000,           // 15초 타임아웃
-            maximumAge: 300000        // 5분간 캐시된 위치 사용 가능
-          }
-        );
-      } else {
-        console.error('Geolocation API를 지원하지 않는 브라우저입니다.');
-        if (window.onLocationError) {
-          window.onLocationError('이 브라우저는 위치 서비스를 지원하지 않습니다.');
+      final double lat = (coords.latitude ?? _defaultCenterLat).toDouble();
+      final double lng = (coords.longitude ?? _defaultCenterLng).toDouble();
+      final double accuracy = (coords.accuracy ?? 0).toDouble();
+      _handleLocationSuccess(lat, lng, accuracy);
+    }).catchError((error) {
+      String message;
+      if (error is html.PositionError) {
+        switch (error.code) {
+          case html.PositionError.PERMISSION_DENIED:
+            message = '위치 접근 권한이 거부되었습니다.';
+            break;
+          case html.PositionError.POSITION_UNAVAILABLE:
+            message = '위치 정보를 사용할 수 없습니다.';
+            break;
+          case html.PositionError.TIMEOUT:
+            message = '위치 요청 시간이 초과되었습니다.';
+            break;
+          default:
+            message = '알 수 없는 오류가 발생했습니다.';
         }
+      } else {
+        message = '$error';
       }
-    ''',
-    ]);
 
-    // JavaScript 콜백 함수 등록
-    js.context['onLocationSuccess'] = js.allowInterop((
-      double lat,
-      double lng,
-      double accuracy,
-    ) {
-      // mounted 체크로 위젯이 여전히 트리에 있는지 확인
-      if (mounted) {
-        setState(() {
-          _statusMessage = '현재 위치로 이동했습니다. (정확도: ${accuracy.toInt()}m)';
-        });
-
-        // 주변 흡연구역 자동 검색
-        _searchNearbyAreas(lat, lng);
-      }
-    });
-
-    js.context['onLocationError'] = js.allowInterop((String errorMessage) {
-      // mounted 체크로 위젯이 여전히 트리에 있는지 확인
-      if (mounted) {
-        setState(() {
-          _statusMessage = '위치 획득 실패: $errorMessage';
-        });
-      }
+      _handleLocationError(message, fallback: true);
     });
   }
 
-  // 현재 위치 기반 주변 흡연구역 검색
-  Future<void> _searchNearbyAreas(double lat, double lng) async {
-    try {
-      final response = await http.get(
-        Uri.parse(
-          '$_baseUrl/smoking-areas/nearby?lat=$lat&lng=$lng&radius=1000&limit=10',
-        ),
-        headers: {'Content-Type': 'application/json'},
-      );
+  void _handleLocationSuccess(double lat, double lng, double accuracy) {
+    if (!mounted) {
+      return;
+    }
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['success'] == true) {
-          final nearbyCount = data['count'] ?? 0;
-          // mounted 체크로 안전한 setState 호출
-          if (mounted) {
-            setState(() {
-              _statusMessage = '현재 위치 주변 ${nearbyCount}개의 흡연구역을 찾았습니다.';
-            });
-          }
-        }
+    setState(() {
+      _statusMessage = '현재 위치로 이동했습니다. (정확도: ${accuracy.toInt()}m)';
+    });
+
+    _setMapCenterOrQueue(lat, lng, zoom: 16);
+
+    void scheduleFetch([int attempt = 0]) {
+      if (!mounted) {
+        return;
       }
-    } catch (e) {
-      print('주변 검색 오류: $e');
+
+      if (_currentViewId == null && attempt < 10) {
+        Future.delayed(const Duration(milliseconds: 200), () {
+          scheduleFetch(attempt + 1);
+        });
+        return;
+      }
+
+      Future.delayed(const Duration(milliseconds: 350), () {
+        if (!mounted) {
+          return;
+        }
+        final bool success = _fetchCurrentViewport(force: true);
+        if (success) {
+          _initialLocationFetchDone = true;
+        } else if (attempt < 10) {
+          scheduleFetch(attempt + 1);
+        } else {
+          _initialLocationFetchDone = true;
+        }
+      });
+    }
+
+    scheduleFetch();
+  }
+
+  void _handleLocationError(String message, {bool fallback = false}) {
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _statusMessage = '위치 획득 실패: $message';
+      if (fallback && !_initialLocationFetchDone) {
+        _statusMessage += ' (기본 위치로 지도를 표시합니다)';
+      }
+    });
+
+    if (fallback && !_initialLocationFetchDone) {
+      _setMapCenterOrQueue(_defaultCenterLat, _defaultCenterLng, zoom: 12);
+      void tryFetch([int attempt = 0]) {
+        if (!mounted) {
+          return;
+        }
+
+        if (_currentViewId == null && attempt < 10) {
+          Future.delayed(const Duration(milliseconds: 200), () {
+            tryFetch(attempt + 1);
+          });
+          return;
+        }
+
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (!mounted) {
+            return;
+          }
+          final bool success = _fetchCurrentViewport(force: true);
+          if (success) {
+            _initialLocationFetchDone = true;
+          } else if (attempt < 10) {
+            tryFetch(attempt + 1);
+          } else {
+            _initialLocationFetchDone = true;
+          }
+        });
+      }
+
+      tryFetch();
+    }
+  }
+
+  void _setMapCenterOrQueue(double lat, double lng,
+      {double? zoom}) {
+    _pendingCenterLat = lat;
+    _pendingCenterLng = lng;
+    _pendingCenterZoom = zoom;
+
+    if (_currentViewId == null) {
+      return;
+    }
+
+    if (_applyCenterToMap(
+      _currentViewId!,
+      lat,
+      lng,
+      zoom,
+    )) {
+      _pendingCenterLat = null;
+      _pendingCenterLng = null;
+      _pendingCenterZoom = null;
+    }
+  }
+
+  bool _applyCenterToMap(
+    int viewId,
+    double lat,
+    double lng,
+    double? zoom,
+  ) {
+    final String zoomSnippet = zoom != null
+        ? 'try { map.setZoom(${zoom.toStringAsFixed(2)}); } catch (zError) { console.warn(\'줌 설정 실패\', zError); }'
+        : '';
+
+    final String script = '''
+      (function() {
+        var map = window.naverMap_$viewId;
+        if (!map || typeof map.setCenter !== 'function') {
+          return false;
+        }
+        var position = new naver.maps.LatLng($lat, $lng);
+        map.setCenter(position);
+        $zoomSnippet;
+        try {
+          if (window.currentLocationMarker) {
+            window.currentLocationMarker.setMap(null);
+          }
+          window.currentLocationMarker = new naver.maps.Marker({
+            position: position,
+            map: map,
+            icon: {
+              content: '<div style="width:20px;height:20px;background:#4285F4;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>',
+              anchor: new naver.maps.Point(10, 10)
+            },
+            title: '현재 위치'
+          });
+        } catch (markerError) {
+          console.warn('현재 위치 마커 갱신 실패:', markerError);
+        }
+        return true;
+      })();
+    ''';
+
+    final dynamic result = js.context.callMethod('eval', [script]);
+    return result == true;
+  }
+
+  void _flushPendingCenterIfNeeded() {
+    if (_pendingCenterLat == null || _pendingCenterLng == null) {
+      return;
+    }
+    if (_currentViewId == null) {
+      return;
+    }
+    if (_applyCenterToMap(
+      _currentViewId!,
+      _pendingCenterLat!,
+      _pendingCenterLng!,
+      _pendingCenterZoom,
+    )) {
+      _pendingCenterLat = null;
+      _pendingCenterLng = null;
+      _pendingCenterZoom = null;
     }
   }
 
@@ -1644,6 +2104,12 @@ class _MapScreenState extends State<MapScreen>
     js.context['flutter_map_longpress'] = null;
     js.context['flutterReportFalseLocation'] = null;
     js.context['flutterDeleteSmokingArea'] = null;
+    js.context['flutterMapViewportChanged'] = null;
+    _viewportDebounceTimer?.cancel();
+    _pendingViewportRequest = null;
+    _rendererReadyTimer?.cancel();
+    _rendererReadyTimer = null;
+    _pendingMarkerRenderViewId = null;
 
     // viewId별 콜백도 정리
     if (_currentViewId != null) {

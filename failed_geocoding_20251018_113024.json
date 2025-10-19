@@ -1,0 +1,1153 @@
+{
+  "timestamp": "2025-10-18T11:30:24.010805",
+  "total_rows": 459,
+  "successes": 189,
+  "api_calls": 166,
+  "reused_coordinates": 31,
+  "failures": [
+    {
+      "index": 10,
+      "query": "센트럴시티 호남선 출입구 옆",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 32,
+      "query": "강남대로30길 7",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 33,
+      "query": "남부순환로 2636",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 71,
+      "query": "서울특별시 성동구 성수동1가 686-709",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 89,
+      "query": "경상북도 안동시 풍천면 도청대로 456",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 91,
+      "query": "경상북도 안동시 풍천면 도청대로 456",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 105,
+      "query": "서울시 강북구 한천로 1289",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 151,
+      "query": "경상북도 청도군 청도읍 신기길 78-10",
+      "meta": {
+        "status_code": 200,
+        "response_meta": {
+          "is_end": true,
+          "pageable_count": 0,
+          "total_count": 0
+        }
+      }
+    },
+    {
+      "index": 197,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 198,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 199,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 200,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 201,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 202,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 203,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 204,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 205,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 206,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 207,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 208,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 209,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 210,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 211,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 212,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 213,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 214,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 215,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 216,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 217,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 218,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 219,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 220,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 221,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 222,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 223,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 224,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 225,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 226,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 227,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 228,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 229,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 230,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 231,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 232,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 233,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 234,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 235,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 236,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 237,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 238,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 239,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 240,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 241,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 242,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 243,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 244,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 245,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 246,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 247,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 248,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 249,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 250,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 251,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 252,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 253,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 254,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 255,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 256,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 257,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 258,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 259,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 260,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 261,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 262,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 263,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 264,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 265,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 266,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 267,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 268,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 269,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 270,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 271,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 272,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 273,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 274,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 275,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 276,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 277,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 278,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 279,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 280,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 281,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 282,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 283,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 284,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 285,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 286,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 287,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 288,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 289,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 290,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 291,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 292,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 293,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 294,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 295,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 296,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 297,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 298,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 299,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 300,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 301,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 302,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 303,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 304,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 305,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 306,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 307,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 308,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 309,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 310,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 311,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 312,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 313,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 314,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 315,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 316,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 317,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 318,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 319,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 320,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 321,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 322,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 323,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 324,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 325,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 326,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 327,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 328,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 329,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 330,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 331,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 332,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 333,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 334,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 335,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 336,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 337,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 338,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 339,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 340,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 341,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 342,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 343,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 344,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 345,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 346,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 347,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 348,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 349,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 350,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 351,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 352,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 353,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 354,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 355,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 356,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 357,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 358,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 359,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 360,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 361,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 362,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 363,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 364,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 365,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 366,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 367,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 368,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 369,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 370,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 371,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 372,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 373,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 374,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 375,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 376,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 377,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 378,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 379,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 380,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 381,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 382,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 383,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 384,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 385,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 386,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 387,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 388,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 389,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 390,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 391,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 392,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 393,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 394,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 395,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 396,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 397,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 398,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 399,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 400,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 401,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 402,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 403,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 404,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 405,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 406,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 407,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 408,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 409,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 410,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 411,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 412,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 413,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 414,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 415,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 416,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 417,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 418,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 419,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 420,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 421,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 422,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 423,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 424,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 425,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 426,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 427,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 428,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 429,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 430,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 431,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 432,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 433,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 434,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 435,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 436,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 437,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 438,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 439,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 440,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 441,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 442,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 443,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 444,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 445,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 446,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 447,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 448,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 449,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 450,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 451,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 452,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 453,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 454,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 455,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 456,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 457,
+      "reason": "주소/상세 미존재"
+    },
+    {
+      "index": 458,
+      "reason": "주소/상세 미존재"
+    }
+  ]
+}

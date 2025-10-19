@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import argparse
 import os
 import time
 import json
@@ -17,10 +18,11 @@ RAW_CSV_PATH = os.path.join('old', 'data', 'smoking_place_raw.csv')
 
 
 class RawSmokingAreaSeeder:
-    def __init__(self, csv_path: str = RAW_CSV_PATH):
+    def __init__(self, csv_path: str = RAW_CSV_PATH, mode: str = 'replace'):
         load_dotenv()
 
         self.csv_path = csv_path
+        self.mode = mode if mode in {'replace', 'append'} else 'replace'
         self.kakao_api_key = os.getenv('KAKAO_API_KEY')
         self.kakao_api_url = os.getenv('KAKAO_API_URL', 'https://dapi.kakao.com/v2/local/search/address.json')
         self.api_delay = float(os.getenv('API_DELAY', 0.2))
@@ -123,14 +125,101 @@ class RawSmokingAreaSeeder:
         try:
             with conn:
                 with conn.cursor() as cur:
-                    cur.execute('TRUNCATE TABLE smoking_areas RESTART IDENTITY CASCADE;')
+                    self._ensure_table_shape(cur)
+                    if self.mode == 'replace':
+                        cur.execute('TRUNCATE TABLE smoking_areas RESTART IDENTITY CASCADE;')
+                        execute_values(
+                            cur,
+                            'INSERT INTO smoking_areas (category, submitted_category, address, detail, postal_code, longitude, latitude, status, report_count, created_at, updated_at) VALUES %s',
+                            records,
+                        )
+                        print(f'  ↳ {len(records)}개 레코드로 테이블을 재구성했습니다.')
+                        return
+
+                    # append 모드: 기존 레코드와 중복을 피하며 신규만 추가
+                    cur.execute(
+                        """
+                        SELECT LOWER(TRIM(address)), LOWER(COALESCE(detail, ''))
+                        FROM smoking_areas
+                        """
+                    )
+                    existing_keys = {tuple(row) for row in cur.fetchall()}
+
+                    new_records: list[tuple] = []
+                    for record in records:
+                        address_key = (record[2] or '').strip().lower()
+                        detail_key = (record[3] or '').strip().lower()
+                        key = (address_key, detail_key)
+
+                        if key in existing_keys:
+                            continue
+
+                        existing_keys.add(key)
+                        new_records.append(record)
+
+                    if not new_records:
+                        print('  ↳ 추가할 신규 레코드가 없어 데이터베이스는 변경되지 않았습니다.')
+                        return
+
                     execute_values(
                         cur,
                         'INSERT INTO smoking_areas (category, submitted_category, address, detail, postal_code, longitude, latitude, status, report_count, created_at, updated_at) VALUES %s',
-                        records,
+                        new_records,
                     )
+                    print(f'  ↳ 신규 {len(new_records)}개 레코드를 데이터베이스에 추가했습니다.')
         finally:
             conn.close()
+
+    @staticmethod
+    def _ensure_table_shape(cursor):
+        cursor.execute(
+            """
+            SELECT column_name FROM information_schema.columns
+            WHERE table_name = 'smoking_areas'
+            """
+        )
+        existing_columns = {row[0] for row in cursor.fetchall()}
+
+        migrations: list[tuple[str, str]] = [
+            (
+                'submitted_category',
+                "ALTER TABLE smoking_areas ADD COLUMN IF NOT EXISTS submitted_category VARCHAR(20);",
+            ),
+            (
+                'detail',
+                "ALTER TABLE smoking_areas ADD COLUMN IF NOT EXISTS detail TEXT;",
+            ),
+            (
+                'postal_code',
+                "ALTER TABLE smoking_areas ADD COLUMN IF NOT EXISTS postal_code VARCHAR(10);",
+            ),
+            (
+                'status',
+                "ALTER TABLE smoking_areas ADD COLUMN IF NOT EXISTS status VARCHAR(10) DEFAULT 'active';",
+            ),
+            (
+                'report_count',
+                "ALTER TABLE smoking_areas ADD COLUMN IF NOT EXISTS report_count INTEGER DEFAULT 0;",
+            ),
+            (
+                'created_at',
+                "ALTER TABLE smoking_areas ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;",
+            ),
+            (
+                'updated_at',
+                "ALTER TABLE smoking_areas ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;",
+            ),
+        ]
+
+        for column, statement in migrations:
+            if column not in existing_columns:
+                cursor.execute(statement)
+
+        # 기존 행에 상태/리포트 카운트 기본값 채우기 (없을 경우만)
+        if 'status' not in existing_columns:
+            cursor.execute("UPDATE smoking_areas SET status = COALESCE(status, 'active');")
+        if 'report_count' not in existing_columns:
+            cursor.execute("UPDATE smoking_areas SET report_count = COALESCE(report_count, 0);")
 
     def run(self):
         df = self.load_dataframe()
@@ -215,7 +304,23 @@ class RawSmokingAreaSeeder:
 
 
 def main():
-    seeder = RawSmokingAreaSeeder()
+    parser = argparse.ArgumentParser(description='Seed smoking area data into PostgreSQL.')
+    parser.add_argument(
+        '--csv',
+        dest='csv_path',
+        default=RAW_CSV_PATH,
+        help='Path to source CSV (default: old/data/smoking_place_raw.csv)',
+    )
+    parser.add_argument(
+        '--mode',
+        choices=['replace', 'append'],
+        default='replace',
+        help='Insertion mode: replace truncates the table, append adds only new rows.',
+    )
+
+    args = parser.parse_args()
+
+    seeder = RawSmokingAreaSeeder(csv_path=args.csv_path, mode=args.mode)
     seeder.run()
 
 

@@ -32,37 +32,159 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
-  int _currentIndex = 0;
+class _TabConfig {
+  const _TabConfig({required this.screen, required this.navItem});
 
-  final List<Widget> _screens = const [
-    SmokingAreaListScreen(),
-    MapScreen(),
-    AdminScreen(),
-    ApiTestScreen(),
-  ];
+  final Widget screen;
+  final BottomNavigationBarItem navItem;
+}
+
+class _MainScreenState extends State<MainScreen>
+    with WidgetsBindingObserver {
+  static const int _baseTabCount = 2;
+
+  int _currentIndex = 0;
+  bool _hasAdminAccess = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
+    _hasAdminAccess = _readAdminToken();
+    if (!_hasAdminAccess) {
+      _currentIndex = 0;
+    }
+
+    js.context['flutterRefreshAdminTabs'] = js.allowInterop(() {
+      if (!mounted) {
+        return;
+      }
+      _evaluateAdminAccess();
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      _evaluateAdminAccess();
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _evaluateAdminAccess();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    js.context['flutterRefreshAdminTabs'] = null;
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _evaluateAdminAccess();
+    }
+  }
+
+  bool _readAdminToken() {
+    try {
+      if (js.context.hasProperty('ADMIN_ACCESS_TOKEN')) {
+        final tokenValue = js.context['ADMIN_ACCESS_TOKEN'];
+        return tokenValue is String && tokenValue.trim().isNotEmpty;
+      }
+    } catch (_) {
+      // ignore and fall through to false
+    }
+    return false;
+  }
+
+  void _evaluateAdminAccess() {
+    final hasAdmin = _readAdminToken();
+
+    if (hasAdmin == _hasAdminAccess) {
+      return;
+    }
+
+    if (!mounted) {
+      _hasAdminAccess = hasAdmin;
+      if (!_hasAdminAccess && _currentIndex >= _baseTabCount) {
+        _currentIndex = 0;
+      }
+      return;
+    }
+
+    setState(() {
+      _hasAdminAccess = hasAdmin;
+      if (!_hasAdminAccess && _currentIndex >= _baseTabCount) {
+        _currentIndex = 0;
+      }
+    });
+  }
+
+  List<_TabConfig> get _tabConfigs {
+    final tabs = <_TabConfig>[
+      const _TabConfig(
+        screen: SmokingAreaListScreen(),
+        navItem: BottomNavigationBarItem(
+          icon: Icon(Icons.list),
+          label: '흡연구역',
+        ),
+      ),
+      const _TabConfig(
+        screen: MapScreen(),
+        navItem: BottomNavigationBarItem(
+          icon: Icon(Icons.map),
+          label: '지도',
+        ),
+      ),
+    ];
+
+    if (_hasAdminAccess) {
+      tabs.addAll(const [
+        _TabConfig(
+          screen: AdminScreen(),
+          navItem: BottomNavigationBarItem(
+            icon: Icon(Icons.admin_panel_settings),
+            label: '관리자',
+          ),
+        ),
+        _TabConfig(
+          screen: ApiTestScreen(),
+          navItem: BottomNavigationBarItem(
+            icon: Icon(Icons.api),
+            label: 'API 테스트',
+          ),
+        ),
+      ]);
+    }
+
+    return tabs;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final tabs = _tabConfigs;
+    final visibleIndex = _currentIndex < tabs.length ? _currentIndex : 0;
+
     return Scaffold(
-      body: IndexedStack(index: _currentIndex, children: _screens),
+      body: IndexedStack(
+        index: visibleIndex,
+        children: tabs.map((tab) => tab.screen).toList(),
+      ),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
+        currentIndex: visibleIndex,
         onTap: (index) {
           setState(() {
             _currentIndex = index;
           });
         },
         type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.list), label: '흡연구역'),
-          BottomNavigationBarItem(icon: Icon(Icons.map), label: '지도'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.admin_panel_settings),
-            label: '관리자',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.api), label: 'API 테스트'),
-        ],
+        items: tabs.map((tab) => tab.navItem).toList(),
       ),
     );
   }
