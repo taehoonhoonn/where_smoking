@@ -93,6 +93,7 @@
     }
 
     var citizenMarkerSvg = config.citizenMarkerSvg || '';
+    var shouldFitBounds = config.shouldFitBounds === true;
 
     markerDataList.forEach(function (data) {
       try {
@@ -147,6 +148,8 @@
       }
     });
 
-    fitBoundsToMarkers(map, window[markersVar]);
+    if (shouldFitBounds) {
+      fitBoundsToMarkers(map, window[markersVar]);
+    }
   };
 })();

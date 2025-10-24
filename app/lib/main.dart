@@ -42,8 +42,9 @@ class _TabConfig {
 class _MainScreenState extends State<MainScreen>
     with WidgetsBindingObserver {
   static const int _baseTabCount = 2;
+  static const int _mapTabIndex = 0;
 
-  int _currentIndex = 0;
+  int _currentIndex = _mapTabIndex;
   bool _hasAdminAccess = false;
 
   @override
@@ -52,9 +53,6 @@ class _MainScreenState extends State<MainScreen>
     WidgetsBinding.instance.addObserver(this);
 
     _hasAdminAccess = _readAdminToken();
-    if (!_hasAdminAccess) {
-      _currentIndex = 0;
-    }
 
     js.context['flutterRefreshAdminTabs'] = js.allowInterop(() {
       if (!mounted) {
@@ -113,7 +111,7 @@ class _MainScreenState extends State<MainScreen>
     if (!mounted) {
       _hasAdminAccess = hasAdmin;
       if (!_hasAdminAccess && _currentIndex >= _baseTabCount) {
-        _currentIndex = 0;
+        _currentIndex = _mapTabIndex;
       }
       return;
     }
@@ -121,7 +119,7 @@ class _MainScreenState extends State<MainScreen>
     setState(() {
       _hasAdminAccess = hasAdmin;
       if (!_hasAdminAccess && _currentIndex >= _baseTabCount) {
-        _currentIndex = 0;
+        _currentIndex = _mapTabIndex;
       }
     });
   }
@@ -129,17 +127,17 @@ class _MainScreenState extends State<MainScreen>
   List<_TabConfig> get _tabConfigs {
     final tabs = <_TabConfig>[
       const _TabConfig(
-        screen: SmokingAreaListScreen(),
-        navItem: BottomNavigationBarItem(
-          icon: Icon(Icons.list),
-          label: '흡연구역',
-        ),
-      ),
-      const _TabConfig(
         screen: MapScreen(),
         navItem: BottomNavigationBarItem(
           icon: Icon(Icons.map),
           label: '지도',
+        ),
+      ),
+      const _TabConfig(
+        screen: SmokingAreaListScreen(),
+        navItem: BottomNavigationBarItem(
+          icon: Icon(Icons.list),
+          label: '흡연구역',
         ),
       ),
     ];

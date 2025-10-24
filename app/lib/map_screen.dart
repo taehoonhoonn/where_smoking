@@ -1032,6 +1032,8 @@ class _MapScreenState extends State<MapScreen>
             json.decode(response.body) as Map<String, dynamic>;
 
         if (data['success'] == true) {
+          final bool shouldFitToMarkers =
+              !_hasCompletedInitialFetch && !_initialLocationFetchDone;
           final List<dynamic> rawAreas =
               data['smoking_areas'] as List<dynamic>? ?? <dynamic>[];
           final List<Map<String, dynamic>> normalizedAreas = rawAreas
@@ -1056,7 +1058,10 @@ class _MapScreenState extends State<MapScreen>
           }
 
           if (_currentViewId != null) {
-            _addMarkersToMap(_currentViewId!);
+            _addMarkersToMap(
+              _currentViewId!,
+              fitBounds: shouldFitToMarkers,
+            );
           }
 
           _lastFetchedCenterLat = request.centerLat;
@@ -1290,7 +1295,7 @@ class _MapScreenState extends State<MapScreen>
     _markerRendererScriptInjectionRequested = true;
   }
 
-  void _addMarkersToMap(int viewId) {
+  void _addMarkersToMap(int viewId, {bool fitBounds = false}) {
     if (_smokingAreas.isEmpty) return;
 
     print('마커 추가 시작: ' + _smokingAreas.length.toString() + '개');
@@ -1334,6 +1339,7 @@ class _MapScreenState extends State<MapScreen>
       'viewId': viewId,
       'markers': markerPayload,
       'citizenMarkerSvg': _citizenMarkerSvgContent,
+      'shouldFitBounds': fitBounds,
     });
 
     try {
