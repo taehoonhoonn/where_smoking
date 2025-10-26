@@ -19,19 +19,10 @@ COPY . ./
 
 # Generate runtime configuration using build-time secrets or defaults.
 RUN set -eu; \
-    if [ -z "${NAVER_MAP_KEY}" ]; then \
-      echo "[warn] NAVER_MAP_KEY build arg not provided; config.js will contain an empty key."; \
-    fi; \
-    if [ -z "${API_BASE_URL}" ]; then \
-      API_BASE_URL_DEFAULT="http://localhost:3000/api/v1"; \
-    else \
-      API_BASE_URL_DEFAULT="${API_BASE_URL}"; \
-    fi; \
-    cat <<EOF > web/config.js
-window.NAVER_MAP_KEY = "${NAVER_MAP_KEY}";
-window.ADMIN_ACCESS_TOKEN = "${ADMIN_ACCESS_TOKEN}";
-window.API_BASE_URL = "${API_BASE_URL_DEFAULT}";
-EOF
+    API_BASE_URL_DEFAULT="${API_BASE_URL:-http://localhost:3000/api/v1}"; \
+    printf 'window.NAVER_MAP_KEY = "%s";\n' "${NAVER_MAP_KEY}" > web/config.js; \
+    printf 'window.ADMIN_ACCESS_TOKEN = "%s";\n' "${ADMIN_ACCESS_TOKEN}" >> web/config.js; \
+    printf 'window.API_BASE_URL = "%s";\n' "${API_BASE_URL_DEFAULT}" >> web/config.js
 
 # Build Flutter web bundle
 RUN flutter build web --release
