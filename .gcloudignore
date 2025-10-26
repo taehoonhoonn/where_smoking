@@ -1,0 +1,4 @@
+# Minimal ignore file for Cloud Build
+.gcloudignore
+.git
+.gitignore
