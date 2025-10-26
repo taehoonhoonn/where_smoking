@@ -5,11 +5,12 @@ for hosting on Cloud Run.
 
 ## Build steps
 
-1. Build the container image (from the `app/` directory):
+1. Build the container image (run from the repository root so the `app/`
+   directory is available to the Docker build context):
    ```bash
    gcloud builds submit \
      --tag gcr.io/project-371e286b-0a83-429a-930/wheresmoking-web \
-     --file deploy/web/Dockerfile \
+     --file app/deploy/web/Dockerfile \
      .
    ```
 
