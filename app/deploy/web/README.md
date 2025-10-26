@@ -10,11 +10,18 @@ for hosting on Cloud Run.
    ```bash
    gcloud builds submit app \
      --tag gcr.io/project-371e286b-0a83-429a-930/wheresmoking-web \
-     --file Dockerfile.web
+     --file Dockerfile.web \
+     --build-arg NAVER_MAP_KEY="$NAVER_MAP_KEY" \
+     --build-arg ADMIN_ACCESS_TOKEN="$ADMIN_ACCESS_TOKEN" \
+     --build-arg API_BASE_URL="$API_BASE_URL"
    ```
 
    The Dockerfile runs `flutter build web --release` inside the build stage so
    no local build artefacts are required beforehand.
+
+   > **Tip:** When using Cloud Build triggers or GitHub Actions, source these
+   > build args from Secret Manager / repository secrets instead of committing
+   > them to the repo.
 
 2. Deploy to Cloud Run (서비스 이름이 `where-smoking-w`인 경우):
    ```bash

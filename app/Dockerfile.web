@@ -2,15 +2,38 @@ FROM ghcr.io/cirruslabs/flutter:stable AS builder
 
 WORKDIR /workspace/app
 
+ARG NAVER_MAP_KEY=""
+ARG ADMIN_ACCESS_TOKEN=""
+ARG API_BASE_URL=""
+
+ENV NAVER_MAP_KEY=${NAVER_MAP_KEY}
+ENV ADMIN_ACCESS_TOKEN=${ADMIN_ACCESS_TOKEN}
+ENV API_BASE_URL=${API_BASE_URL}
+
 # Cache dependencies
 COPY pubspec.yaml pubspec.lock ./
 RUN flutter pub get
 
-# Copy source and build the web bundle
+# Copy source
 COPY . ./
-RUN if [ ! -f web/config.js ] && [ -f web/config.sample.js ]; then \
-      cp web/config.sample.js web/config.js; \
-    fi
+
+# Generate runtime configuration using build-time secrets or defaults.
+RUN set -eu; \
+    if [ -z "${NAVER_MAP_KEY}" ]; then \
+      echo "[warn] NAVER_MAP_KEY build arg not provided; config.js will contain an empty key."; \
+    fi; \
+    if [ -z "${API_BASE_URL}" ]; then \
+      API_BASE_URL_DEFAULT="http://localhost:3000/api/v1"; \
+    else \
+      API_BASE_URL_DEFAULT="${API_BASE_URL}"; \
+    fi; \
+    cat <<EOF > web/config.js
+window.NAVER_MAP_KEY = "${NAVER_MAP_KEY}";
+window.ADMIN_ACCESS_TOKEN = "${ADMIN_ACCESS_TOKEN}";
+window.API_BASE_URL = "${API_BASE_URL_DEFAULT}";
+EOF
+
+# Build Flutter web bundle
 RUN flutter build web --release
 
 FROM nginx:1.27-alpine
