@@ -38,5 +38,5 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 # 포트 노출
 EXPOSE 8080
 
-# 개발 모드로 실행
-CMD ["npm", "run"]
+# 앱 실행 (프로덕션 모드)
+CMD ["npm", "start"]
