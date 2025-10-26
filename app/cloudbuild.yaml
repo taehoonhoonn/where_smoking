@@ -1,4 +1,8 @@
 steps:
+  - name: 'ubuntu' # 디버깅용 스텝 추가
+    dir: 'app'
+    args: ['bash', '-c', 'echo "NAVER_MAP_KEY_SUBST: ${_NAVER_MAP_KEY}"; echo "ADMIN_ACCESS_TOKEN_SUBST: ${_ADMIN_ACCESS_TOKEN}"; echo "API_BASE_URL_SUBST: ${_API_BASE_URL}"']
+    
   - name: gcr.io/cloud-builders/docker
     dir: app
     args:
@@ -12,9 +16,7 @@ steps:
       - -t
       - gcr.io/project-371e286b-0a83-429a-930/where-smoking-web
       - .
-  - name: 'ubuntu' # 디버깅용 스텝 추가
-    dir: 'app'
-    args: ['bash', '-c', 'echo "NAVER_MAP_KEY_SUBST: ${_NAVER_MAP_KEY}"; echo "ADMIN_ACCESS_TOKEN_SUBST: ${_ADMIN_ACCESS_TOKEN}"; echo "API_BASE_URL_SUBST: ${_API_BASE_URL}"']
+
   
 images:
   - gcr.io/project-371e286b-0a83-429a-930/where-smoking-web
