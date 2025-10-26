@@ -1,0 +1,5 @@
+# Files and directories to skip uploading to Cloud Build.
+# Keep only mandatory exclusions so that the Flutter web build is included.
+.gcloudignore
+.git
+.gitignore
