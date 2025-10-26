@@ -1,16 +1,20 @@
-     steps:                                                                                                                                                                                                     
-       - name: gcr.io/cloud-builders/docker                                                                                                                                                                     
-         dir: app                                                                                                                                                                                               
-         args:                                                                                                                                                                                                  
-           - build                                                                                                                                                                                              
-           - "-f"                                                                                                                                                                                               
-           - Dockerfile.web                                                                                                                                                                                     
-           - "-t"                                                                                                                                                                                               
-           - gcr.io/project-371e286b-0a83-429a-930/where-smoking-web                                                                                                                                             
-           - "--build-arg"                                                                                                                                                                                      
-           - NAVER_MAP_KEY=${_NAVER_MAP_KEY}                                                                                                                                                                    
-           - "--build-arg"                                                                                                                                                                                      
-           - API_BASE_URL=${_API_BASE_URL}                                                                                                                                                                      
-     images:                                                                                                                                                                                                    
-       - gcr.io/project-371e286b-0a83-429a-930/where-smoking-web     
-     logsBucket: gs://cloud-build-logs-asia-northeast1
+steps:
+  - name: gcr.io/cloud-builders/docker
+    dir: app
+    args:
+      - build
+      - -f
+      - Dockerfile.web
+      - --build-arg
+      - NAVER_MAP_KEY=${_NAVER_MAP_KEY}
+      - --build-arg
+      - API_BASE_URL=${_API_BASE_URL}
+      - -t
+      - gcr.io/project-371e286b-0a83-429a-930/where-smoking-web
+      - .
+
+images:
+  - gcr.io/project-371e286b-0a83-429a-930/where-smoking-web
+
+options:
+  logging: CLOUD_LOGGING_ONLY
