@@ -2,7 +2,7 @@ const { Pool } = require('pg');
 const { sqlLogger, errorLogger, debugLogger } = require('./logger');
 
 // PostgreSQL 연결 풀 생성
-const pool = new Pool({
+const poolConfig = {
   host: process.env.DB_HOST || 'localhost',
   port: process.env.DB_PORT || 5432,
   database: process.env.DB_NAME || 'smoking_areas_db',
@@ -11,7 +11,18 @@ const pool = new Pool({
   max: 20, // 최대 연결 수
   idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT_MS, 10) || 30000, // 유휴 연결 제거 시간
   connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT_MS, 10) || 10000, // 연결 타임아웃
+};
+
+debugLogger('Database pool configured', {
+  host: poolConfig.host,
+  port: poolConfig.port,
+  database: poolConfig.database,
+  user: poolConfig.user,
+  idleTimeoutMillis: poolConfig.idleTimeoutMillis,
+  connectionTimeoutMillis: poolConfig.connectionTimeoutMillis,
 });
+
+const pool = new Pool(poolConfig);
 
 // 연결 테스트
 pool.on('connect', (client) => {
@@ -46,6 +57,10 @@ const query = async (text, params = []) => {
       query: text,
       params,
       duration: `${duration}ms`,
+      dbHost: poolConfig.host,
+      dbPort: poolConfig.port,
+      database: poolConfig.database,
+      user: poolConfig.user,
     });
 
     throw error;
@@ -68,7 +83,13 @@ const transaction = async (callback) => {
     return result;
   } catch (error) {
     await client.query('ROLLBACK');
-    errorLogger(error, { context: 'Transaction rollback' });
+    errorLogger(error, {
+      context: 'Transaction rollback',
+      dbHost: poolConfig.host,
+      dbPort: poolConfig.port,
+      database: poolConfig.database,
+      user: poolConfig.user,
+    });
     throw error;
   } finally {
     client.release();
@@ -82,7 +103,13 @@ const checkConnection = async () => {
     debugLogger('Database connection test successful');
     return true;
   } catch (error) {
-    errorLogger(error, { context: 'Database connection test' });
+    errorLogger(error, {
+      context: 'Database connection test',
+      dbHost: poolConfig.host,
+      dbPort: poolConfig.port,
+      database: poolConfig.database,
+      user: poolConfig.user,
+    });
     return false;
   }
 };
