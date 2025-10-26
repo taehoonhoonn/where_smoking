@@ -1,9 +1,12 @@
-import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:js' as js;
-import 'map_screen.dart';
+
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
 import 'admin_screen.dart';
+import 'config.dart';
+import 'map_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -196,7 +199,7 @@ class SmokingAreaListScreen extends StatefulWidget {
 }
 
 class _SmokingAreaListScreenState extends State<SmokingAreaListScreen> {
-  final String _baseUrl = 'https://wheresmoking-911109485093.asia-northeast3.run.app/api/v1';
+  final String _baseUrl = getApiBaseUrl();
   List<dynamic> _smokingAreas = [];
   bool _isLoading = false;
   String _searchQuery = '';
@@ -544,7 +547,7 @@ class ApiTestScreen extends StatefulWidget {
 class _ApiTestScreenState extends State<ApiTestScreen> {
   String _output = '';
   bool _isLoading = false;
-  final String _baseUrl = 'https://wheresmoking-911109485093.asia-northeast3.run.app/api/v1';
+  final String _baseUrl = getApiBaseUrl();
 
   void _log(String message) {
     setState(() {

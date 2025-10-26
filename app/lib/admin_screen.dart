@@ -1,7 +1,10 @@
-import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:js' as js;
+
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
+import 'config.dart';
 
 class AdminScreen extends StatefulWidget {
   const AdminScreen({super.key});
@@ -11,7 +14,7 @@ class AdminScreen extends StatefulWidget {
 }
 
 class _AdminScreenState extends State<AdminScreen> {
-  final String _baseUrl = 'https://wheresmoking-911109485093.asia-northeast3.run.app/api/v1';
+  final String _baseUrl = getApiBaseUrl();
   List<dynamic> _pendingAreas = [];
   bool _isLoading = false;
   String? _adminToken;

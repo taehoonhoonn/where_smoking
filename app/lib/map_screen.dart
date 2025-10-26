@@ -1,11 +1,14 @@
-import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:html' as html;
 import 'dart:js' as js;
 import 'dart:math' as math;
 import 'dart:ui_web' as ui;
+
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
+import 'config.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -89,7 +92,7 @@ class _ViewportRequest {
 
 class _MapScreenState extends State<MapScreen>
     with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
-  final String _baseUrl = 'https://wheresmoking-911109485093.asia-northeast3.run.app/api/v1';
+  final String _baseUrl = getApiBaseUrl();
   static const double _defaultCenterLat = 37.5666805;
   static const double _defaultCenterLng = 126.9784147;
   bool _isLoading = false;
