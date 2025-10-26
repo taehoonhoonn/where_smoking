@@ -5,14 +5,7 @@ for hosting on Cloud Run.
 
 ## Build steps
 
-1. Generate the Flutter web bundle:
-   ```bash
-   cd app
-   flutter build web
-   cp web/config.js build/web/
-   ```
-
-2. Build the container image (from the `app/` directory):
+1. Build the container image (from the `app/` directory):
    ```bash
    gcloud builds submit \
      --tag gcr.io/project-371e286b-0a83-429a-930/wheresmoking-web \
@@ -20,7 +13,10 @@ for hosting on Cloud Run.
      .
    ```
 
-3. Deploy to Cloud Run:
+   The Dockerfile runs `flutter build web --release` inside the build stage so
+   no local build artefacts are required beforehand.
+
+2. Deploy to Cloud Run:
    ```bash
    gcloud run deploy wheresmoking-web \
      --image gcr.io/project-371e286b-0a83-429a-930/wheresmoking-web \
@@ -28,7 +24,7 @@ for hosting on Cloud Run.
      --allow-unauthenticated
    ```
 
-4. (Optional) Map `wheresmoking.kr` or a subdomain to the service via the
+3. (Optional) Map `wheresmoking.kr` or a subdomain to the service via the
    Cloud Run console.
 
 The service listens on port 8080 and routes all unknown paths to `index.html`
