@@ -21,7 +21,7 @@ COPY . ./
 RUN set -eu; \
     API_BASE_URL_DEFAULT="${API_BASE_URL:-https://api.wheresmoking.kr/api/v1}"; \
     NAVER_MAP_KEY_DEFAULT="${NAVER_MAP_KEY:-jdlowyicuj}"; \
-    printf 'window.NAVER_MAP_KEY = "%s";\n' "${NAVER_NAVER_MAP_KEY_DEFAULTAP_KEY}" > web/config.js; \
+    printf 'window.NAVER_MAP_KEY = "%s";\n' "${NAVER_MAP_KEY_DEFAULT}" > web/config.js; \
     printf 'window.ADMIN_ACCESS_TOKEN = "%s";\n' "${ADMIN_ACCESS_TOKEN}" >> web/config.js; \
     printf 'window.API_BASE_URL = "%s";\n' "${API_BASE_URL_DEFAULT}" >> web/config.js
 
