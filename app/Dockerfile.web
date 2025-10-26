@@ -19,7 +19,7 @@ COPY . ./
 
 # Generate runtime configuration using build-time secrets or defaults.
 RUN set -eu; \
-    API_BASE_URL_DEFAULT="${API_BASE_URL:-http://localhost:3000/api/v1}"; \
+    API_BASE_URL_DEFAULT="${API_BASE_URL:-https://api.wheresmoking.kr/api/v1}"; \
     printf 'window.NAVER_MAP_KEY = "%s";\n' "${NAVER_MAP_KEY}" > web/config.js; \
     printf 'window.ADMIN_ACCESS_TOKEN = "%s";\n' "${ADMIN_ACCESS_TOKEN}" >> web/config.js; \
     printf 'window.API_BASE_URL = "%s";\n' "${API_BASE_URL_DEFAULT}" >> web/config.js
