@@ -196,7 +196,7 @@ class SmokingAreaListScreen extends StatefulWidget {
 }
 
 class _SmokingAreaListScreenState extends State<SmokingAreaListScreen> {
-  final String _baseUrl = 'http://localhost:3000/api/v1';
+  final String _baseUrl = 'https://wheresmoking-911109485093.asia-northeast3.run.app/api/v1';
   List<dynamic> _smokingAreas = [];
   bool _isLoading = false;
   String _searchQuery = '';
@@ -544,7 +544,7 @@ class ApiTestScreen extends StatefulWidget {
 class _ApiTestScreenState extends State<ApiTestScreen> {
   String _output = '';
   bool _isLoading = false;
-  final String _baseUrl = 'http://localhost:3000/api/v1';
+  final String _baseUrl = 'https://wheresmoking-911109485093.asia-northeast3.run.app/api/v1';
 
   void _log(String message) {
     setState(() {

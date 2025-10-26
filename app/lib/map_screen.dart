@@ -89,7 +89,7 @@ class _ViewportRequest {
 
 class _MapScreenState extends State<MapScreen>
     with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
-  final String _baseUrl = 'http://localhost:3000/api/v1';
+  final String _baseUrl = 'https://wheresmoking-911109485093.asia-northeast3.run.app/api/v1';
   static const double _defaultCenterLat = 37.5666805;
   static const double _defaultCenterLng = 126.9784147;
   bool _isLoading = false;
