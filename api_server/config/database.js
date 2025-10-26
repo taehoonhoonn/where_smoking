@@ -9,8 +9,8 @@ const pool = new Pool({
   user: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD || '',
   max: 20, // 최대 연결 수
-  idleTimeoutMillis: 30000, // 유휴 연결 제거 시간
-  connectionTimeoutMillis: 2000, // 연결 타임아웃
+  idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT_MS, 10) || 30000, // 유휴 연결 제거 시간
+  connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT_MS, 10) || 10000, // 연결 타임아웃
 });
 
 // 연결 테스트
