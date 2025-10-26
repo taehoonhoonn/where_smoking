@@ -13,3 +13,4 @@
            - API_BASE_URL=${_API_BASE_URL}                                                                                                                                                                      
      images:                                                                                                                                                                                                    
        - gcr.io/project-371e286b-0a83-429a-930/where-smoking-web     
+     logsBucket: gs://cloud-build-logs-asia-northeast1
