@@ -41,3 +41,9 @@
 - Never commit `app/web/config.js` or `api_server/.env`; both are ignored and should stay local.
 - When touching JS interop for the map, guard new globals to avoid clobbering existing window-level callbacks.
 - Admin-only API actions (approve/reject/delete) require matching `ADMIN_ACCESS_TOKEN` in the server `.env` and `window.ADMIN_ACCESS_TOKEN` in `app/web/config.js`; without both, admin controls remain hidden.
+
+## 시민 제보 워크플로우
+- 지도 롱프레스 감지는 네이버 지도 `longtap` 이벤트(모바일)와 `mousedown` 타이머(데스크톱) 모두를 유지해 플랫폼별 제보 입력을 보장합니다.
+- 시민 제보 다이얼로그에서는 등록 유형을 반드시 선택하도록 하고, 옵션은 `공식 흡연장소`·`비공식 흡연장소` 두 가지입니다. 선택 결과는 API의 `submitted_category`로 전달됩니다.
+
+naver map 기능 수정을 위한 참고 자료는 https://github.com/navermaps/maps.js.ncp 를 참조한다

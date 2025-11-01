@@ -135,6 +135,15 @@ class _MapScreenState extends State<MapScreen>
       .replaceAll('\n', '')
       .replaceAll("'", "\\'");
 
+  static const List<String> _registrationCategoryOptions = <String>[
+    '공식 흡연장소',
+    '비공식 흡연장소',
+  ];
+
+  static const String _longPressNoticeStorageKey =
+      'where_smoking_long_press_notice_v1';
+  bool _shouldShowLongPressNotice = false;
+
   bool get _hasAdminAccess =>
       _adminToken != null && _adminToken!.trim().isNotEmpty;
 
@@ -147,6 +156,7 @@ class _MapScreenState extends State<MapScreen>
     WidgetsBinding.instance.addObserver(this);
     _loadAdminToken();
     _registerMapWidget();
+    _evaluateLongPressNotice();
     js.context['flutterMapViewportChanged'] =
         js.allowInterop((dynamic payload) {
       if (payload == null) {
@@ -162,6 +172,7 @@ class _MapScreenState extends State<MapScreen>
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _moveToMyLocation();
+      _showLongPressNoticeIfNeeded();
     });
   }
 
@@ -230,6 +241,64 @@ class _MapScreenState extends State<MapScreen>
 
       _confirmDeleteArea(parsedId);
     });
+  }
+
+  void _evaluateLongPressNotice() {
+    try {
+      final storedValue =
+          html.window.localStorage[_longPressNoticeStorageKey];
+      _shouldShowLongPressNotice = storedValue != 'true';
+    } catch (_) {
+      _shouldShowLongPressNotice = true;
+    }
+  }
+
+  void _markLongPressNoticeDismissed() {
+    _shouldShowLongPressNotice = false;
+    try {
+      html.window.localStorage[_longPressNoticeStorageKey] = 'true';
+    } catch (_) {
+      // LocalStorage 접근 실패는 무시 (시크릿 모드 등)
+    }
+  }
+
+  void _showLongPressNoticeIfNeeded() {
+    if (!_shouldShowLongPressNotice || !mounted) {
+      return;
+    }
+
+    // 한 번만 띄우도록 즉시 플래그 비활성화
+    _shouldShowLongPressNotice = false;
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('지도 사용 안내'),
+          content: const Text(
+            '지도를 길게 누르면 새로운 흡연구역을 제보할 수 있어요.\n'
+            '등록하고 싶은 위치를 꾹 눌러 시민제보를 진행해 주세요.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                _markLongPressNoticeDismissed();
+                Navigator.of(context).pop();
+              },
+              child: const Text('다시 보지 않기'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                _markLongPressNoticeDismissed();
+                Navigator.of(context).pop();
+              },
+              child: const Text('알겠어요'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _toggleAdminMode() {
@@ -473,7 +542,10 @@ class _MapScreenState extends State<MapScreen>
         ..style.width = '100%'
         ..style.height = '100%'
         ..style.border = 'none'
-        ..style.backgroundColor = '#f0f0f0';
+        ..style.backgroundColor = '#f0f0f0'
+        ..style.setProperty('-webkit-touch-callout', 'none')
+        ..style.setProperty('-webkit-user-select', 'none')
+        ..style.setProperty('user-select', 'none');
 
       // 디버깅을 위한 로그
       print('지도 컨테이너 생성: naver-map-$viewId');
@@ -609,11 +681,44 @@ class _MapScreenState extends State<MapScreen>
               }
             });
 
-            // 길게 누르기 이벤트 리스너 추가 (모바일용)
+            // 길게 누르기 이벤트 리스너 추가 (모바일/데스크톱)
             var longPressTimer = null;
             var longPressStartPos = null;
             var isLongPress = false;
             var longPressExecuted = false;
+
+            function triggerFlutterLongPress(e, source) {
+              if (!e || !e.coord) {
+                console.warn('길게 누르기 무시(' + source + '): 좌표 없음');
+                return;
+              }
+
+              if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+              }
+
+              if (window.isLocationDialogShowing) {
+                console.log('길게 누르기 무시(' + source + '): 이미 다이얼로그 표시 중');
+                return;
+              }
+
+              var currentTime = Date.now();
+              if (currentTime - window.lastLongPressTime < 2000) {
+                console.log('길게 누르기 무시(' + source + '): 너무 빠른 연속 클릭 (디바운싱)');
+                return;
+              }
+
+              isLongPress = true;
+              longPressExecuted = true;
+              window.isLocationDialogShowing = true;
+              window.lastLongPressTime = currentTime;
+              console.log('길게 누르기 감지(' + source + '):', e.coord.lat(), e.coord.lng());
+
+              if (window.flutter_map_longpress) {
+                window.flutter_map_longpress($viewId, e.coord.lat(), e.coord.lng());
+              }
+            }
 
             // 전역 중복 방지 플래그 및 디바운싱
             if (typeof window.isLocationDialogShowing === 'undefined') {
@@ -623,9 +728,14 @@ class _MapScreenState extends State<MapScreen>
               window.lastLongPressTime = 0;
             }
 
-            // 터치/마우스 시작
+            // 모바일 Safari 등 터치 환경 longtap 지원
+            naver.maps.Event.addListener(window.naverMap_$viewId, 'longtap', function(e) {
+              longPressStartPos = e && e.coord ? e.coord : null;
+              triggerFlutterLongPress(e, 'longtap');
+            });
+
+            // 마우스 기반 long press (데스크톱 대비)
             naver.maps.Event.addListener(window.naverMap_$viewId, 'mousedown', function(e) {
-              // 다이얼로그가 이미 열려있으면 길게 누르기 무시
               if (window.isLocationDialogShowing) {
                 console.log('길게 누르기 시작 무시: 이미 다이얼로그 표시 중');
                 return;
@@ -633,45 +743,25 @@ class _MapScreenState extends State<MapScreen>
 
               isLongPress = false;
               longPressExecuted = false;
-              longPressStartPos = e.coord;
+              longPressStartPos = e && e.coord ? e.coord : null;
+
+              if (longPressTimer) {
+                clearTimeout(longPressTimer);
+              }
 
               longPressTimer = setTimeout(function() {
                 if (!longPressExecuted) {
-                  var currentTime = Date.now();
-
-                  // 중복 방지 확인
-                  if (window.isLocationDialogShowing) {
-                    console.log('길게 누르기 무시: 이미 다이얼로그 표시 중');
-                    return;
-                  }
-
-                  // 시간 기반 디바운싱 (마지막 길게 누르기로부터 2초 이내는 무시)
-                  if (currentTime - window.lastLongPressTime < 2000) {
-                    console.log('길게 누르기 무시: 너무 빠른 연속 클릭 (디바운싱)');
-                    return;
-                  }
-
-                  isLongPress = true;
-                  longPressExecuted = true;
-                  window.isLocationDialogShowing = true;
-                  window.lastLongPressTime = currentTime;
-                  console.log('길게 누르기 감지:', e.coord.lat(), e.coord.lng());
-
-                  // Flutter로 길게 누르기 좌표 전달
-                  if (window.flutter_map_longpress) {
-                    window.flutter_map_longpress($viewId, e.coord.lat(), e.coord.lng());
-                  }
+                  triggerFlutterLongPress(e, 'mousedown');
                 }
               }, 500); // 500ms 길게 누르기
             });
 
             // 터치/마우스 이동 (드래그 시 길게 누르기 취소)
             naver.maps.Event.addListener(window.naverMap_$viewId, 'mousemove', function(e) {
-              if (longPressTimer && longPressStartPos) {
+              if (longPressTimer && longPressStartPos && e && e.coord) {
                 var distance = Math.abs(e.coord.lat() - longPressStartPos.lat()) +
                               Math.abs(e.coord.lng() - longPressStartPos.lng());
 
-                // 좌표가 너무 많이 이동하면 길게 누르기 취소
                 if (distance > 0.0001) {
                   clearTimeout(longPressTimer);
                   longPressTimer = null;
@@ -680,12 +770,12 @@ class _MapScreenState extends State<MapScreen>
             });
 
             // 터치/마우스 끝
-            naver.maps.Event.addListener(window.naverMap_$viewId, 'mouseup', function(e) {
+            naver.maps.Event.addListener(window.naverMap_$viewId, 'mouseup', function() {
               if (longPressTimer) {
                 clearTimeout(longPressTimer);
                 longPressTimer = null;
               }
-              // 잠시 후 플래그 리셋 (다음 길게 누르기를 위해)
+
               setTimeout(function() {
                 longPressExecuted = false;
               }, 100);
@@ -1950,6 +2040,8 @@ class _MapScreenState extends State<MapScreen>
     _isDialogShowing = true;
 
     final TextEditingController detailController = TextEditingController();
+    String? selectedCategory;
+    String? categoryError;
 
     showDialog(
       context: context,
@@ -1977,24 +2069,35 @@ class _MapScreenState extends State<MapScreen>
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 4),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.deepOrange.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.deepOrange.shade200),
-                      ),
-                      child: const Text(
-                        '시민제보',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.deepOrange,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ..._registrationCategoryOptions.map(
+                          (option) => RadioListTile<String>(
+                            title: Text(option),
+                            value: option,
+                            groupValue: selectedCategory,
+                            contentPadding: EdgeInsets.zero,
+                            onChanged: (value) {
+                              setState(() {
+                                selectedCategory = value;
+                                categoryError = null;
+                              });
+                            },
+                          ),
                         ),
-                      ),
+                        if (categoryError != null)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 12, top: 4),
+                            child: Text(
+                              categoryError!,
+                              style: const TextStyle(
+                                color: Colors.red,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 16),
 
@@ -2006,7 +2109,7 @@ class _MapScreenState extends State<MapScreen>
                       controller: detailController,
                       maxLines: 3,
                       decoration: const InputDecoration(
-                        hintText: '이 흡연구역에 대한 추가 정보를 입력하세요...',
+                        hintText: '해당 위치를 좀더 자세히 설명해주세요 ex) 건물 후문으로 나가 바로 오른쪽',
                         border: OutlineInputBorder(),
                       ),
                     ),
@@ -2028,7 +2131,20 @@ class _MapScreenState extends State<MapScreen>
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    _submitNewLocation(lat, lng, detailController.text);
+                    if (selectedCategory == null ||
+                        selectedCategory!.trim().isEmpty) {
+                      setState(() {
+                        categoryError = '등록 유형을 선택해야 합니다.';
+                      });
+                      return;
+                    }
+
+                    _submitNewLocation(
+                      lat,
+                      lng,
+                      detailController.text,
+                      selectedCategory!,
+                    );
                     Navigator.of(context).pop();
                     _resetDialogState(); // 등록 신청 시 다이얼로그 상태 리셋
                   },
@@ -2043,7 +2159,26 @@ class _MapScreenState extends State<MapScreen>
   }
 
   // 새 장소 등록 API 호출
-  Future<void> _submitNewLocation(double lat, double lng, String detail) async {
+  Future<void> _submitNewLocation(
+    double lat,
+    double lng,
+    String detail,
+    String submittedCategory,
+  ) async {
+    final String normalizedCategory = submittedCategory.trim();
+
+    if (normalizedCategory.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('등록 유형을 선택한 뒤 다시 시도해주세요.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
     if (mounted) {
       setState(() {
         _isLoading = true;
@@ -2059,8 +2194,13 @@ class _MapScreenState extends State<MapScreen>
           'latitude': lat,
           'longitude': lng,
           'detail': detail.isEmpty ? null : detail,
+          'category': normalizedCategory,
         }),
       );
+
+      final Map<String, dynamic>? body = response.body.isNotEmpty
+          ? json.decode(response.body) as Map<String, dynamic>
+          : null;
 
       if (response.statusCode == 201) {
         if (mounted) {
@@ -2069,7 +2209,6 @@ class _MapScreenState extends State<MapScreen>
           });
         }
 
-        // 성공 메시지 표시
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -2079,7 +2218,9 @@ class _MapScreenState extends State<MapScreen>
           );
         }
       } else {
-        throw Exception('등록 실패: ${response.statusCode}');
+        final String errorMessage =
+            body?['message']?.toString() ?? '등록 실패: ${response.statusCode}';
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (mounted) {
@@ -2090,7 +2231,10 @@ class _MapScreenState extends State<MapScreen>
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('등록 실패: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('등록 실패: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }

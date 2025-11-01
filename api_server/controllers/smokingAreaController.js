@@ -1,6 +1,49 @@
 const { query } = require('../config/database');
 const { debugLogger, errorLogger } = require('../config/logger');
 
+const SUBMITTED_CATEGORY_OPTIONS = [
+  { key: 'official', label: '공식 흡연장소' },
+  { key: 'unofficial', label: '비공식 흡연장소' },
+];
+
+const SUBMITTED_CATEGORY_LOOKUP = SUBMITTED_CATEGORY_OPTIONS.reduce(
+  (acc, option) => {
+    acc[option.key] = option.label;
+    acc[option.label] = option.label;
+    acc[option.label.replace(/\s+/g, '')] = option.label;
+    return acc;
+  },
+  {},
+);
+
+function resolveSubmittedCategory(rawCategory) {
+  if (typeof rawCategory !== 'string') {
+    return null;
+  }
+
+  const trimmed = rawCategory.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const directMatch = SUBMITTED_CATEGORY_LOOKUP[trimmed];
+  if (directMatch) {
+    return directMatch;
+  }
+
+  const lowerKeyMatch = SUBMITTED_CATEGORY_LOOKUP[trimmed.toLowerCase()];
+  if (lowerKeyMatch) {
+    return lowerKeyMatch;
+  }
+
+  const compactKeyMatch = SUBMITTED_CATEGORY_LOOKUP[trimmed.replace(/\s+/g, '')];
+  if (compactKeyMatch) {
+    return compactKeyMatch;
+  }
+
+  return null;
+}
+
 class SmokingAreaController {
   // 모든 흡연구역 조회
   static async getAllAreas(req, res) {
@@ -338,7 +381,15 @@ class SmokingAreaController {
     try {
       const { latitude, longitude, detail, category } = req.body;
       const storedCategory = '시민제보';
-      const submittedCategory = typeof category === 'string' ? category.trim() : null;
+      const submittedCategory = resolveSubmittedCategory(category);
+
+      if (!submittedCategory) {
+        return res.status(400).json({
+          success: false,
+          error: 'Validation error',
+          message: '등록 유형을 선택해주세요. (공식 흡연장소 또는 비공식 흡연장소)',
+        });
+      }
 
       const latNum = Number(latitude);
       const lngNum = Number(longitude);

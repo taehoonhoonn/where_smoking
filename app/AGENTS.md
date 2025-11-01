@@ -9,3 +9,4 @@
 - 배포 전 `web/config.sample.js`를 복사해 `web/config.js`를 만들고, `window.NAVER_MAP_KEY`에 로컬/테스트 키만 입력합니다. (API 서버에서는 카카오 키를 요구하지 않으며, 데이터 파이프라인 키는 `scripts/.env`에 별도로 설정하세요.)
 - 새로운 JavaScript 브리지 함수를 추가할 경우, 기존 전역 콜백과 충돌하지 않도록 네이밍을 명확히 합니다.
 - 관리자 전용 기능(마커 삭제/승인 등)을 사용하려면 `window.ADMIN_ACCESS_TOKEN`을 `web/config.js`에 설정하고, API 서버 `.env`의 `ADMIN_ACCESS_TOKEN`과 일치시키세요.
+- 시민 제보 다이얼로그는 등록 유형(공식/비공식 흡연장소) 선택이 필수이며 값은 API의 `submitted_category`로 전달됩니다. 라디오 옵션을 변경할 때는 서버 검증 목록(`official`/`unofficial`)과 동기화하세요.
