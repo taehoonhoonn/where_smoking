@@ -38,6 +38,14 @@ dependencies:
   # HTTP package for API calls
   http: ^1.1.0
 
+  # WebView 기반 모바일 앱 구현을 위한 패키지
+  webview_flutter: ^4.4.4
+  webview_flutter_android: ^4.10.5
+  webview_flutter_wkwebview: ^3.23.2
+
+  # 런타임 위치 권한을 요청하기 위한 패키지
+  permission_handler: ^11.3.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

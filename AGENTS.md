@@ -19,6 +19,9 @@
 - `cd app && flutter pub get`: Sync Flutter dependencies.
 - `cp app/web/config.sample.js app/web/config.js`: Create a local map-key config (then assign `window.NAVER_MAP_KEY`).
 - `cd app && flutter run -d web-server --web-port=8080`: Serve the web client locally; ensure the API is running first.
+- `cd app && flutter run --dart-define=USE_LOCAL_WEB_APP=true --dart-define=LOCAL_WEB_APP_URL=http://localhost:8080 -d android`:
+  Launch the mobile WebView shell against your local Flutter web server.
+  `mobile_config.dart` rewrites `localhost` to `10.0.2.2` (Android) or `127.0.0.1` (iOS) so emulators reach the host machine.
 
 ## Coding Style & Naming Conventions
 - **Backend (Node.js)**: Use `eslint` default/airbnb-style conventions—2-space indentation, camelCase for variables/functions, PascalCase for classes. Place Express middleware in `middleware/` and controllers in `controllers/`.
