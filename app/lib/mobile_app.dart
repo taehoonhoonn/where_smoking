@@ -95,6 +95,18 @@ class _MobileWebViewHomeState extends State<MobileWebViewHome> {
             }
           },
           onWebResourceError: (error) {
+            final bool isMainFrame = error.isForMainFrame ?? true;
+
+            // 폰트·서드파티 스크립트처럼 메인 프레임이 아닌 리소스까지
+            // 에러로 처리하면 실제 페이지가 로드되어도 오류 화면이 덮입니다.
+            if (!isMainFrame) {
+              debugPrint(
+                'Ignoring subresource error (${error.errorCode}): '
+                '${error.description}',
+              );
+              return;
+            }
+
             setState(() {
               _hasError = true;
               _lastErrorMessage = error.description.isNotEmpty
