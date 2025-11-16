@@ -15,6 +15,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: '흡연구역 찾기',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
@@ -40,7 +41,7 @@ class _TabConfig {
 
 class _MainScreenState extends State<MainScreen>
     with WidgetsBindingObserver {
-  static const int _baseTabCount = 2;
+  static const int _baseTabCount = 1;
   static const int _mapTabIndex = 0;
 
   int _currentIndex = _mapTabIndex;
@@ -132,13 +133,6 @@ class _MainScreenState extends State<MainScreen>
           label: '지도',
         ),
       ),
-      const _TabConfig(
-        screen: SmokingAreaListScreen(),
-        navItem: BottomNavigationBarItem(
-          icon: Icon(Icons.list),
-          label: '흡연구역',
-        ),
-      ),
     ];
 
     if (_hasAdminAccess) {
@@ -167,22 +161,25 @@ class _MainScreenState extends State<MainScreen>
   Widget build(BuildContext context) {
     final tabs = _tabConfigs;
     final visibleIndex = _currentIndex < tabs.length ? _currentIndex : 0;
+    final showBottomNav = tabs.length > 1;
 
     return Scaffold(
       body: IndexedStack(
         index: visibleIndex,
         children: tabs.map((tab) => tab.screen).toList(),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: visibleIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        type: BottomNavigationBarType.fixed,
-        items: tabs.map((tab) => tab.navItem).toList(),
-      ),
+      bottomNavigationBar: showBottomNav
+          ? BottomNavigationBar(
+              currentIndex: visibleIndex,
+              onTap: (index) {
+                setState(() {
+                  _currentIndex = index;
+                });
+              },
+              type: BottomNavigationBarType.fixed,
+              items: tabs.map((tab) => tab.navItem).toList(),
+            )
+          : null,
     );
   }
 }

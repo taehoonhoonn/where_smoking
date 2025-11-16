@@ -17,65 +17,6 @@ class MapScreen extends StatefulWidget {
   State<MapScreen> createState() => _MapScreenState();
 }
 
-class _MarkerLegendPainter extends CustomPainter {
-  _MarkerLegendPainter({
-    required this.fillColor,
-    required this.borderColor,
-    required this.innerColor,
-  });
-
-  final Color fillColor;
-  final Color borderColor;
-  final Color innerColor;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final path = Path()
-      ..moveTo(size.width / 2, size.height)
-      ..cubicTo(
-        size.width * 0.82,
-        size.height * 0.75,
-        size.width,
-        size.height * 0.5,
-        size.width,
-        size.height * 0.35,
-      )
-      ..arcToPoint(
-        Offset(0, size.height * 0.35),
-        radius: Radius.circular(size.width),
-        clockwise: false,
-      )
-      ..cubicTo(
-        0,
-        size.height * 0.5,
-        size.width * 0.18,
-        size.height * 0.75,
-        size.width / 2,
-        size.height,
-      )
-      ..close();
-
-    final fillPaint = Paint()..color = fillColor;
-    canvas.drawPath(path, fillPaint);
-
-    final borderPaint = Paint()
-      ..color = borderColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-    canvas.drawPath(path, borderPaint);
-
-    final innerRadius = size.width * 0.22;
-    canvas.drawCircle(
-      Offset(size.width / 2, size.height * 0.38),
-      innerRadius,
-      Paint()..color = innerColor,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
 class _ViewportRequest {
   const _ViewportRequest({
     required this.centerLat,
@@ -141,7 +82,7 @@ class _MapScreenState extends State<MapScreen>
   ];
 
   static const String _longPressNoticeStorageKey =
-      'where_smoking_long_press_notice_v1';
+      'where_smoking_welcome_dialog_v2';
   bool _shouldShowLongPressNotice = false;
 
   bool get _hasAdminAccess =>
@@ -172,7 +113,7 @@ class _MapScreenState extends State<MapScreen>
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _moveToMyLocation();
-      _showLongPressNoticeIfNeeded();
+      _showLongPressNoticeIfNeeded(force: true);
     });
   }
 
@@ -262,8 +203,12 @@ class _MapScreenState extends State<MapScreen>
     }
   }
 
-  void _showLongPressNoticeIfNeeded() {
-    if (!_shouldShowLongPressNotice || !mounted) {
+  void _showLongPressNoticeIfNeeded({bool force = false}) {
+    if (!mounted) {
+      return;
+    }
+
+    if (!force && !_shouldShowLongPressNotice) {
       return;
     }
 
@@ -273,32 +218,524 @@ class _MapScreenState extends State<MapScreen>
     showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('지도 사용 안내'),
-          content: const Text(
-            '지도를 길게 누르면 새로운 흡연구역을 제보할 수 있어요.\n'
-            '등록하고 싶은 위치를 꾹 눌러 시민제보를 진행해 주세요.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                _markLongPressNoticeDismissed();
-                Navigator.of(context).pop();
-              },
-              child: const Text('다시 보지 않기'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                _markLongPressNoticeDismissed();
-                Navigator.of(context).pop();
-              },
-              child: const Text('알겠어요'),
-            ),
-          ],
+      builder: (dialogContext) {
+        const int totalPages = 3;
+        int currentPage = 0;
+
+        void closeDialog() {
+          _markLongPressNoticeDismissed();
+          Navigator.of(dialogContext).pop();
+        }
+
+        Widget buildPageContent() {
+          switch (currentPage) {
+            case 0:
+              return _buildWelcomeDialogPageOne();
+            case 1:
+              return _buildWelcomeDialogPageTwo();
+            default:
+              return _buildWelcomeDialogPageThree();
+          }
+        }
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final bool isLastPage = currentPage == totalPages - 1;
+
+            return Dialog(
+              insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(28),
+              ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: 400,
+                  maxHeight: MediaQuery.of(context).size.height * 0.9,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Align(
+                        alignment: Alignment.topRight,
+                        child: IconButton(
+                          icon: const Icon(Icons.close),
+                          color: Colors.grey.shade600,
+                          onPressed: closeDialog,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _buildWelcomeDialogHeader(),
+                      const SizedBox(height: 20),
+                      Flexible(
+                        child: SingleChildScrollView(
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 250),
+                            switchInCurve: Curves.easeOut,
+                            switchOutCurve: Curves.easeIn,
+                            child: Container(
+                              key: ValueKey<int>(currentPage),
+                              child: buildPageContent(),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      _buildWelcomeDialogIndicator(
+                        currentPage,
+                        totalPages: totalPages,
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          if (currentPage > 0)
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () {
+                                  setDialogState(() {
+                                    currentPage = math.max(0, currentPage - 1);
+                                  });
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                ),
+                                child: const Text('이전'),
+                              ),
+                            ),
+                          if (currentPage > 0) const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () {
+                                if (isLastPage) {
+                                  closeDialog();
+                                  return;
+                                }
+                                setDialogState(() {
+                                  currentPage =
+                                      math.min(totalPages - 1, currentPage + 1);
+                                });
+                              },
+                              style: ElevatedButton.styleFrom(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                backgroundColor: const Color(0xFF2563EB),
+                                foregroundColor: Colors.white,
+                              ),
+                              child: Text(isLastPage ? '시작하기' : '다음'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
         );
       },
     );
+  }
+
+  Widget _buildWelcomeDialogHeader() {
+    return Column(
+      children: [
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(40),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.12),
+                    offset: const Offset(0, 8),
+                    blurRadius: 20,
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.location_on_outlined,
+                color: Colors.white,
+                size: 40,
+              ),
+            ),
+            Positioned(
+              right: -4,
+              bottom: -4,
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFACC15),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+                child: const Icon(
+                  Icons.search,
+                  color: Colors.white,
+                  size: 16,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        const Text(
+          '흡연구역 찾기',
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          '공식 흡연구역을 쉽고 빠르게 찾아보세요',
+          style: TextStyle(
+            color: Colors.grey.shade700,
+            fontSize: 14,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWelcomeDialogPageOne() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildWelcomeDialogInfoCard(
+          background: const Color(0xFFE8F0FF),
+          iconBackground: const Color(0xFF3B82F6),
+          icon: Icons.location_on,
+          title: '파란색 핀',
+          description: '공공기관에서 제공하는 공식 흡연구역입니다',
+          titleColor: const Color(0xFF1D4ED8),
+          descriptionColor: const Color(0xFF1E40AF),
+        ),
+        const SizedBox(height: 12),
+        _buildWelcomeDialogInfoCard(
+          background: const Color(0xFFFFF4E0),
+          iconBackground: const Color(0xFFFACC15),
+          icon: Icons.location_on,
+          title: '노란색 핀',
+          description: '시민들이 제보한 흡연구역입니다',
+          titleColor: const Color(0xFF92400E),
+          descriptionColor: const Color(0xFF854D0E),
+        ),
+        const SizedBox(height: 12),
+        _buildWelcomeDialogInfoCard(
+          background: const Color(0xFFE7F8ED),
+          iconBackground: const Color(0xFF22C55E),
+          icon: Icons.flag_outlined,
+          title: '흡연구역 제보하기',
+          description: '지도를 길게 눌러 새로운 흡연구역을 제보할 수 있습니다',
+          titleColor: const Color(0xFF065F46),
+          descriptionColor: const Color(0xFF047857),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWelcomeDialogPageTwo() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildWelcomeDialogInfoCard(
+          background: const Color(0xFFF3F4F6),
+          iconBackground: const Color(0xFF374151),
+          icon: Icons.navigation_outlined,
+          title: '현위치 이동',
+          description: '화면 우측 하단 버튼으로 현재 위치로 이동할 수 있습니다',
+          titleColor: const Color(0xFF111827),
+          descriptionColor: const Color(0xFF4B5563),
+        ),
+        const SizedBox(height: 12),
+        _buildWelcomeDialogInfoCard(
+          background: const Color(0xFFF3E8FF),
+          iconBackground: const Color(0xFF8B5CF6),
+          icon: Icons.info_outline,
+          title: '상세 정보 확인',
+          description: '핀 위로 마우스를 올리면 상세 정보를 확인할 수 있습니다',
+          titleColor: const Color(0xFF4C1D95),
+          descriptionColor: const Color(0xFF5B21B6),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            gradient: const LinearGradient(
+              colors: [Color(0xFFE0EDFF), Color(0xFFEDE9FE)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            border: Border.all(color: const Color(0xFFBFDBFE)),
+          ),
+          child: const Text(
+            '쾌적한 환경을 위해 지정된 흡연구역을 이용해주세요',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 13,
+              color: Color(0xFF374151),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWelcomeDialogPageThree() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFFBEA),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text(
+                '공공데이터 주의사항',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF92400E),
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                '공공데이터는 부정확 할 수 있습니다. 가능하면 시민제보 공간을 이용하세요.',
+                style: TextStyle(
+                  fontSize: 14,
+                  height: 1.4,
+                  color: Color(0xFF713F12),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEFF6FF),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text(
+                '함께 만드는 지도',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1D4ED8),
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                '다른 흡연자를 위해 많은 제보 부탁드립니다!',
+                style: TextStyle(
+                  fontSize: 14,
+                  height: 1.4,
+                  color: Color(0xFF1E3A8A),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWelcomeDialogInfoCard({
+    required Color background,
+    required Color iconBackground,
+    required IconData icon,
+    required String title,
+    required String description,
+    Color titleColor = Colors.black,
+    Color descriptionColor = Colors.black54,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: iconBackground,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Icon(
+              icon,
+              color: Colors.white,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: titleColor,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: 13,
+                    height: 1.4,
+                    color: descriptionColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWelcomeDialogIndicator(int currentPage,
+      {int totalPages = 2}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(totalPages, (index) {
+        final bool isActive = index == currentPage;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: isActive ? const Color(0xFF2563EB) : Colors.grey.shade300,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _buildLegendChips() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildLegendChip(
+          color: const Color(0xFF2563EB),
+          label: '공공데이터',
+        ),
+        const SizedBox(height: 8),
+        _buildLegendChip(
+          color: const Color(0xFFFACC15),
+          label: '시민제보',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLegendChip({
+    required Color color,
+    required String label,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(26),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 14,
+            height: 14,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRoundIconButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+    Color backgroundColor = Colors.white,
+    Color iconColor = Colors.black87,
+    String? tooltip,
+  }) {
+    final button = Material(
+      color: backgroundColor,
+      elevation: 6,
+      shape: const CircleBorder(),
+      child: InkWell(
+        onTap: onPressed,
+        customBorder: const CircleBorder(),
+        child: SizedBox(
+          width: 50,
+          height: 50,
+          child: Icon(icon, color: iconColor),
+        ),
+      ),
+    );
+
+    if (tooltip == null) {
+      return button;
+    }
+    return Tooltip(message: tooltip, child: button);
   }
 
   void _toggleAdminMode() {
@@ -604,16 +1041,8 @@ class _MapScreenState extends State<MapScreen>
             var mapOptions = {
               center: new naver.maps.LatLng(37.5666805, 126.9784147), // 서울 시청
               zoom: 12,
-              mapTypeControl: true,
-              mapTypeControlOptions: {
-                style: naver.maps.MapTypeControlStyle.BUTTON,
-                position: naver.maps.Position.TOP_RIGHT
-              },
-              zoomControl: true,
-              zoomControlOptions: {
-                style: naver.maps.ZoomControlStyle.SMALL,
-                position: naver.maps.Position.TOP_LEFT
-              },
+              mapTypeControl: false,
+              zoomControl: false,
               scaleControl: false,
               logoControl: false,
               mapDataControl: false
@@ -1248,10 +1677,6 @@ class _MapScreenState extends State<MapScreen>
     return math.min(100, math.max(40, (radiusMeters / 120).round()));
   }
 
-  void _refreshVisibleAreas() {
-    _fetchCurrentViewport(force: true);
-  }
-
   bool _fetchCurrentViewport({bool force = false}) {
     if (_currentViewId == null) {
       print('뷰포트 정보를 가져올 수 없습니다: 활성화된 viewId가 없습니다.');
@@ -1448,62 +1873,6 @@ class _MapScreenState extends State<MapScreen>
     }
   }
 
-  Future<void> _searchNearby() async {
-    // 현재 지도 중심 좌표 가져오기
-    final centerInfo = js.context.callMethod('eval', [
-      '''
-      if (window.naverMap) {
-        var center = window.naverMap.getCenter();
-        JSON.stringify({lat: center.lat(), lng: center.lng()});
-      }
-    ''',
-    ]);
-
-    if (centerInfo != null) {
-      final center = json.decode(centerInfo);
-
-      if (mounted) {
-        setState(() {
-          _isLoading = true;
-          _statusMessage = '주변 흡연구역을 검색하는 중...';
-        });
-      }
-
-      try {
-        final response = await http.get(
-          Uri.parse(
-            '$_baseUrl/smoking-areas/nearby?lat=${center['lat']}&lng=${center['lng']}&radius=2000&limit=20',
-          ),
-          headers: {'Content-Type': 'application/json'},
-        );
-
-        if (response.statusCode == 200) {
-          final data = json.decode(response.body);
-          if (data['success'] == true) {
-            if (mounted) {
-              setState(() {
-                _statusMessage =
-                    '주변 ${data['smoking_areas'].length}개의 흡연구역을 찾았습니다.';
-              });
-            }
-          }
-        }
-      } catch (e) {
-        if (mounted) {
-          setState(() {
-            _statusMessage = '검색 실패: $e';
-          });
-        }
-      }
-
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
   // 마커 재생성 함수 (더 간단하고 확실한 방법)
   void _forceRefreshMarkers() {
     if (_currentViewId != null && _smokingAreas.isNotEmpty && mounted) {
@@ -1512,223 +1881,98 @@ class _MapScreenState extends State<MapScreen>
     }
   }
 
-  Widget _buildLegendMarker({
-    required Color fillColor,
-    required Color borderColor,
-    Color innerColor = Colors.white,
-  }) {
-    return SizedBox(
-      width: 20,
-      height: 28,
-      child: CustomPaint(
-        painter: _MarkerLegendPainter(
-          fillColor: fillColor,
-          borderColor: borderColor,
-          innerColor: innerColor,
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     super.build(context); // AutomaticKeepAliveClientMixin 필수
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('흡연구역 지도'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
-        actions: [
-          if (_hasAdminAccess)
-            IconButton(
-              icon: Icon(
-                _isAdminMode
-                    ? Icons.admin_panel_settings
-                    : Icons.admin_panel_settings_outlined,
-              ),
-              color: _isAdminMode ? Colors.amberAccent : null,
-              onPressed: _toggleAdminMode,
-              tooltip: _isAdminMode ? '관리자 모드 비활성화' : '관리자 모드 활성화',
-            ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _refreshVisibleAreas,
-            tooltip: '데이터 새로고침',
-          ),
-          IconButton(
-            icon: const Icon(Icons.location_on),
-            onPressed: _forceRefreshMarkers,
-            tooltip: '마커 재생성',
-          ),
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: _searchNearby,
-            tooltip: '주변 검색',
-          ),
-        ],
-      ),
+      backgroundColor: Colors.black,
       body: Stack(
         children: [
-          Column(
-            children: [
-              // 상태 표시 바
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  border: Border(
-                    bottom: BorderSide(color: Colors.grey.shade300),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    if (_isLoading) ...[
-                      const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                      const SizedBox(width: 12),
-                    ],
-                    Expanded(
-                      child: Text(
-                        _statusMessage,
-                        style: const TextStyle(fontSize: 14),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // 지도 영역
-              Expanded(
-                child: Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
-                  child: Stack(
-                    children: [
-                      const HtmlElementView(viewType: 'naver-map'),
-                      // 마커 로드 상태 표시 오버레이
-                      if (_smokingAreas.isNotEmpty)
-                        Positioned(
-                          top: 10,
-                          right: 10,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.green.withOpacity(0.9),
-                              borderRadius: BorderRadius.circular(15),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.2),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.location_on,
-                                  color: Colors.white,
-                                  size: 16,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${_smokingAreas.length}개 마커 로드됨',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // 하단 정보 패널
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border(top: BorderSide(color: Colors.grey.shade300)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 4,
-                      offset: const Offset(0, -2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      '범례',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
+          Positioned.fill(
+            child: Container(
+              color: Colors.black,
+              child: const HtmlElementView(viewType: 'naver-map'),
+            ),
+          ),
+          SafeArea(
+            child: SizedBox.expand(
+              child: Stack(
+                children: [
+                  Positioned(
+                    top: 16,
+                    right: 16,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        _buildLegendMarker(
-                          fillColor: const Color(0xFF2563EB),
-                          borderColor: const Color(0xFF1D4ED8),
+                        _buildRoundIconButton(
+                          icon: Icons.help_outline,
+                          tooltip: '지도 사용 안내',
+                          onPressed: () =>
+                              _showLongPressNoticeIfNeeded(force: true),
                         ),
-                        const SizedBox(width: 8),
-                        const Text('공공데이타'),
-                        const SizedBox(width: 24),
-                        _buildLegendMarker(
-                          fillColor: const Color(0xFFFACC15),
-                          borderColor: const Color(0xFFC08900),
-                        ),
-                        const SizedBox(width: 8),
-                        const Text('시민제보'),
+                        if (_hasAdminAccess) ...[
+                          const SizedBox(height: 12),
+                          _buildRoundIconButton(
+                            icon: _isAdminMode
+                                ? Icons.admin_panel_settings
+                                : Icons.admin_panel_settings_outlined,
+                            tooltip: _isAdminMode
+                                ? '관리자 모드 비활성화'
+                                : '관리자 모드 활성화',
+                            backgroundColor: _isAdminMode
+                                ? const Color(0xFFFFF7E0)
+                                : Colors.white,
+                            iconColor: _isAdminMode
+                                ? const Color(0xFF92400E)
+                                : Colors.black87,
+                            onPressed: _toggleAdminMode,
+                          ),
+                        ],
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                  Positioned(
+                    bottom: 28,
+                    left: 16,
+                    right: 96,
+                    child: Align(
+                      alignment: Alignment.bottomLeft,
+                      child: _buildLegendChips(),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 24,
+                    right: 16,
+                    child: _buildRoundIconButton(
+                      icon: Icons.my_location,
+                      tooltip: '현재 위치로 이동',
+                      backgroundColor: Colors.white,
+                      iconColor: const Color(0xFF2563EB),
+                      onPressed: _moveToMyLocation,
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-          // 다이얼로그가 열릴 때 지도 클릭 방지를 위한 오버레이
           if (_isDialogShowing)
-            Container(
-              color: Colors.black.withOpacity(0.3),
-              child: const Center(
-                child: Text(
-                  '흡연구역 등록 중...',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withOpacity(0.3),
+                child: const Center(
+                  child: Text(
+                    '흡연구역 등록 중...',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
             ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _moveToMyLocation,
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
-        child: const Icon(Icons.my_location),
-        tooltip: '현재 위치로 이동',
       ),
     );
   }
