@@ -931,6 +931,36 @@ class _MapScreenState extends State<MapScreen>
     }
   }
 
+  // localStorage 기반 중복 신고 방지 helper 함수들
+  bool _hasAlreadyReported(int areaId) {
+    try {
+      final reportedAreasJson = html.window.localStorage['reported_smoking_areas'];
+      if (reportedAreasJson == null) return false;
+
+      final reportedAreas = json.decode(reportedAreasJson) as List<dynamic>;
+      return reportedAreas.contains(areaId);
+    } catch (e) {
+      print('localStorage 읽기 실패: $e');
+      return false;
+    }
+  }
+
+  void _markAsReported(int areaId) {
+    try {
+      final reportedAreasJson = html.window.localStorage['reported_smoking_areas'];
+      List<dynamic> reportedAreas = reportedAreasJson != null
+          ? json.decode(reportedAreasJson) as List<dynamic>
+          : <dynamic>[];
+
+      if (!reportedAreas.contains(areaId)) {
+        reportedAreas.add(areaId);
+        html.window.localStorage['reported_smoking_areas'] = json.encode(reportedAreas);
+      }
+    } catch (e) {
+      print('localStorage 저장 실패: $e');
+    }
+  }
+
   String _escapeHtml(String value) {
     return value
         .replaceAll('&', '&amp;')
@@ -944,6 +974,7 @@ class _MapScreenState extends State<MapScreen>
     required String title,
     required String address,
     required int areaId,
+    required int reportCount,
   }) {
     final safeTitle = _escapeHtml(title);
     final safeAddress = _escapeHtml(address);
@@ -955,7 +986,18 @@ class _MapScreenState extends State<MapScreen>
       )
       ..write(
         '<p style="margin: 0 0 12px 0; color: #4b5563; font-size: 14px;"><strong>주소:</strong> $safeAddress</p>',
-      )
+      );
+
+    // 신고 수가 0보다 클 때만 표시
+    if (reportCount > 0) {
+      buffer.write(
+        '<div style="margin: 0 0 12px 0; padding: 4px 8px; background-color: #FEF3C7; border-radius: 4px; display: inline-block;">'
+        '<span style="color: #D97706; font-size: 13px; font-weight: bold;">⚠️ 허위 신고 $reportCount회</span>'
+        '</div>',
+      );
+    }
+
+    buffer
       ..write('<div style="display:flex;gap:8px;flex-wrap:wrap;">')
       ..write(
         '<button style="padding: 8px 12px; background-color: #F97316; border: none; border-radius: 6px; color: white; font-size: 13px; cursor: pointer;" onclick="if(window.flutterReportFalseLocation){window.flutterReportFalseLocation($areaId);}">허위 장소 신고하기</button>',
@@ -1320,6 +1362,20 @@ class _MapScreenState extends State<MapScreen>
       return;
     }
 
+    // localStorage에서 이미 신고한 장소인지 확인
+    if (_hasAlreadyReported(id)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('이미 신고하신 장소입니다.'),
+            backgroundColor: Colors.grey,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      return;
+    }
+
     try {
       final response = await http.post(
         Uri.parse('$_baseUrl/smoking-areas/$id/report'),
@@ -1359,6 +1415,9 @@ class _MapScreenState extends State<MapScreen>
               ''',
             ]);
           }
+
+          // localStorage에 신고한 장소 ID 저장
+          _markAsReported(id);
 
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -1836,6 +1895,7 @@ class _MapScreenState extends State<MapScreen>
       final lat = area['coordinates']['latitude'];
       final lng = area['coordinates']['longitude'];
       final detailValue = (area['detail'] as String?)?.trim() ?? '';
+      final reportCount = (area['report_count'] as int?) ?? 0;
       final infoTitleSource = detailValue.isEmpty ? address : detailValue;
 
       return {
@@ -1849,6 +1909,7 @@ class _MapScreenState extends State<MapScreen>
           title: infoTitleSource,
           address: address,
           areaId: id,
+          reportCount: reportCount,
         ),
       };
     }).toList();
@@ -2252,8 +2313,8 @@ class _MapScreenState extends State<MapScreen>
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('흡연구역 등록'),
-          content: Text(
-            '이 위치에 새로운 흡연구역을 등록하시겠습니까?\n\n위치: ${lat.toStringAsFixed(6)}, ${lng.toStringAsFixed(6)}',
+          content: const Text(
+            '선택한 위치에 새로운 흡연구역을 등록하시겠습니까?',
           ),
           actions: [
             TextButton(
@@ -2300,11 +2361,8 @@ class _MapScreenState extends State<MapScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      '위치 정보',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      '좌표: ${lat.toStringAsFixed(6)}, ${lng.toStringAsFixed(6)}',
+                      '선택한 위치에 흡연구역을 등록합니다.',
+                      style: TextStyle(fontSize: 14, color: Colors.grey),
                     ),
                     const SizedBox(height: 16),
 

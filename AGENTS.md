@@ -18,6 +18,7 @@
 - `cd api_server && npm test`: Run Jest tests for controllers, middleware, and routes.
 - `cd app && flutter pub get`: Sync Flutter dependencies.
 - `cp app/web/config.sample.js app/web/config.js`: Create a local map-key config (then assign `window.NAVER_MAP_KEY`).
+- Flutter 웹 클라이언트는 `app/lib/config.dart`를 통해 `window.API_BASE_URL`(없으면 `http://localhost:3000/api/v1`)을 사용하므로, 원격 API에 붙일 땐 `web/config.js`에 해당 값을 함께 정의하세요.
 - `cd app && flutter run -d web-server --web-port=8080`: Serve the web client locally; ensure the API is running first.
 - `cd app && flutter run --dart-define=USE_LOCAL_WEB_APP=true --dart-define=LOCAL_WEB_APP_URL=http://localhost:8080 -d android`:
   Launch the mobile WebView shell against your local Flutter web server.
@@ -44,6 +45,7 @@
 - Never commit `app/web/config.js` or `api_server/.env`; both are ignored and should stay local.
 - When touching JS interop for the map, guard new globals to avoid clobbering existing window-level callbacks.
 - Admin-only API actions (approve/reject/delete) require matching `ADMIN_ACCESS_TOKEN` in the server `.env` and `window.ADMIN_ACCESS_TOKEN` in `app/web/config.js`; without both, admin controls remain hidden.
+- Flutter 웹앱에는 `/api/v1` 엔드포인트 상태를 즉시 검증할 수 있는 `API 테스트` 탭이 있으니, 헬스체크·전체 조회·주변 검색·통계 API를 수동으로 재검증할 때 활용하세요.
 
 ## 시민 제보 워크플로우
 - 지도 롱프레스 감지는 네이버 지도 `longtap` 이벤트(모바일)와 `mousedown` 타이머(데스크톱) 모두를 유지해 플랫폼별 제보 입력을 보장합니다.

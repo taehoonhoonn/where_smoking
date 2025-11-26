@@ -16,7 +16,9 @@
       "Bash(~/flutter/bin/flutter run -d web-server --web-port=8080)",
       "Bash(kill:*)",
       "WebSearch",
-      "Bash(sudo service:*)"
+      "Bash(sudo service:*)",
+      "WebFetch(domain:navermaps.github.io)",
+      "Bash(~/flutter/bin/flutter analyze lib/map_screen.dart)"
     ],
     "deny": [],
     "ask": []
