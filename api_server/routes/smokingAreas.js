@@ -67,6 +67,14 @@ router.get('/category/:category', validateCategory, SmokingAreaController.getAre
 router.get('/pending', requireAdminAuth, SmokingAreaController.getPendingAreas);
 
 /**
+ * @route   GET /api/v1/smoking-areas/reported
+ * @desc    신고된 흡연구역 목록 조회 (관리자용) - 신고 수 많은 순으로 정렬
+ * @access  Admin
+ * @example GET /api/v1/smoking-areas/reported
+ */
+router.get('/reported', requireAdminAuth, SmokingAreaController.getReportedAreas);
+
+/**
  * @route   GET /api/v1/smoking-areas/statistics
  * @desc    흡연구역 통계 정보 조회
  * @access  Public

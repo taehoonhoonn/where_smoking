@@ -536,6 +536,60 @@ class SmokingAreaController {
     }
   }
 
+  // 신고된 흡연구역 목록 조회 (관리자용)
+  static async getReportedAreas(req, res) {
+    try {
+      debugLogger('Getting reported smoking areas');
+
+      const result = await query(`
+        SELECT
+          id, category, submitted_category, address, detail, postal_code,
+          longitude, latitude, report_count, created_at, updated_at
+        FROM smoking_areas
+        WHERE report_count > 0 AND status = 'active'
+        ORDER BY report_count DESC, updated_at DESC
+      `);
+
+      const response = {
+        success: true,
+        count: result.rows.length,
+        reported_areas: result.rows.map(row => ({
+          id: row.id,
+          category: row.category,
+          submitted_category: row.submitted_category,
+          address: row.address,
+          detail: row.detail,
+          postal_code: row.postal_code,
+          coordinates: {
+            longitude: parseFloat(row.longitude),
+            latitude: parseFloat(row.latitude),
+          },
+          report_count: parseInt(row.report_count, 10) || 0,
+          created_at: row.created_at,
+          updated_at: row.updated_at,
+        })),
+      };
+
+      debugLogger('Successfully retrieved reported areas', {
+        count: result.rows.length,
+        totalReports: result.rows.reduce((sum, row) => sum + (parseInt(row.report_count, 10) || 0), 0),
+      });
+
+      res.json(response);
+    } catch (error) {
+      errorLogger(error, {
+        context: 'getReportedAreas',
+        requestId: req.id,
+      });
+
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error',
+        message: 'Failed to retrieve reported areas',
+      });
+    }
+  }
+
   /**
    * 흡연구역 승인 (관리자용)
    */
