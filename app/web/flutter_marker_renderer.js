@@ -106,11 +106,38 @@
           map: map
         };
 
-        if (data.category === '시민제보' && citizenMarkerSvg) {
-          markerOptions.icon = {
-            content: citizenMarkerSvg,
-            anchor: new naver.maps.Point(14, 40)
-          };
+        if (data.category === '시민제보') {
+          var citizenSvgContent = citizenMarkerSvg;
+
+          // 디버깅 로그
+          console.log('시민제보 마커:', {
+            id: data.id,
+            category: data.category,
+            submitted_category: data.submitted_category,
+            address: data.address
+          });
+
+          // submitted_category에 따라 색상 결정
+          if (data.submitted_category === '공식 흡연장소') {
+            // 진한 초록색 (#16A34A)
+            citizenSvgContent = citizenMarkerSvg.replace(/#FACC15/g, '#16A34A');
+            console.log('공식 흡연장소 -> 초록색 적용');
+          } else if (data.submitted_category === '비공식 흡연장소') {
+            // 노란색 (#FACC15) - 기존 색상 유지
+            citizenSvgContent = citizenMarkerSvg;
+            console.log('비공식 흡연장소 -> 노란색 유지');
+          } else {
+            // null이거나 알 수 없는 경우 기본값으로 비공식 흡연장소(노란색) 처리
+            citizenSvgContent = citizenMarkerSvg;
+            console.log('기본값 -> 비공식 흡연장소(노란색), submitted_category:', data.submitted_category);
+          }
+
+          if (citizenSvgContent) {
+            markerOptions.icon = {
+              content: citizenSvgContent,
+              anchor: new naver.maps.Point(14, 40)
+            };
+          }
         }
 
         var marker = new naver.maps.Marker(markerOptions);

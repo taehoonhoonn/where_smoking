@@ -662,8 +662,13 @@ class _MapScreenState extends State<MapScreen>
         ),
         const SizedBox(height: 8),
         _buildLegendChip(
+          color: const Color(0xFF16A34A),
+          label: '공식 흡연장소',
+        ),
+        const SizedBox(height: 8),
+        _buildLegendChip(
           color: const Color(0xFFFACC15),
-          label: '시민제보',
+          label: '비공식 흡연장소',
         ),
       ],
     );
@@ -1896,6 +1901,7 @@ class _MapScreenState extends State<MapScreen>
       final lng = area['coordinates']['longitude'];
       final detailValue = (area['detail'] as String?)?.trim() ?? '';
       final reportCount = (area['report_count'] as int?) ?? 0;
+      final submittedCategory = area['submitted_category'] as String?;
       final infoTitleSource = detailValue.isEmpty ? address : detailValue;
 
       return {
@@ -1905,6 +1911,7 @@ class _MapScreenState extends State<MapScreen>
         'address': address,
         'detail': detailValue,
         'category': category,
+        'submitted_category': submittedCategory,
         'infoWindowContent': _buildInfoWindowContent(
           title: infoTitleSource,
           address: address,
