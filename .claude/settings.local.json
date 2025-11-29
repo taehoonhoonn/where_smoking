@@ -19,7 +19,8 @@
       "Bash(sudo service:*)",
       "WebFetch(domain:navermaps.github.io)",
       "Bash(~/flutter/bin/flutter analyze lib/map_screen.dart)",
-      "Bash(~/flutter/bin/flutter analyze lib/admin_screen.dart)"
+      "Bash(~/flutter/bin/flutter analyze lib/admin_screen.dart)",
+      "WebFetch(domain:api.ncloud-docs.com)"
     ],
     "deny": [],
     "ask": []

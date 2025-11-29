@@ -34,6 +34,10 @@ process.on('unhandledRejection', (reason, promise) => {
 app.use(helmet()); // 보안 헤더
 app.use(compression()); // 응답 압축
 
+// Trust proxy 설정 - Cloud Run에서 X-Forwarded-For 헤더를 올바르게 처리하기 위해 필요
+// Cloud Run은 단일 프록시 홉을 사용하므로 1로 설정
+app.set('trust proxy', 1);
+
 // CORS 설정
 const corsOptions = {
   origin: process.env.CORS_ORIGIN || '*',

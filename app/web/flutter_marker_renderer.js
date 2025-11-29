@@ -119,9 +119,11 @@
 
           // submitted_category에 따라 색상 결정
           if (data.submitted_category === '공식 흡연장소') {
-            // 진한 초록색 (#16A34A)
-            citizenSvgContent = citizenMarkerSvg.replace(/#FACC15/g, '#16A34A');
-            console.log('공식 흡연장소 -> 초록색 적용');
+            // 진한 초록색 (#16A34A) - 배경과 테두리 모두 변경
+            citizenSvgContent = citizenMarkerSvg
+              .replace(/#FACC15/g, '#16A34A')  // fill 색상 변경
+              .replace(/#C08900/g, '#0F7A2C'); // stroke 색상 변경 (더 진한 초록)
+            console.log('공식 흡연장소 -> 초록색 적용 (배경 + 테두리)');
           } else if (data.submitted_category === '비공식 흡연장소') {
             // 노란색 (#FACC15) - 기존 색상 유지
             citizenSvgContent = citizenMarkerSvg;

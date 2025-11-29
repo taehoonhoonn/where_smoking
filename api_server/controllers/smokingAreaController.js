@@ -146,6 +146,7 @@ class SmokingAreaController {
         smoking_areas: result.rows.map(row => ({
           id: row.id,
           category: row.category,
+          submitted_category: row.submitted_category,
           address: row.address,
           detail: row.detail,
           postal_code: row.postal_code,
@@ -266,6 +267,7 @@ class SmokingAreaController {
         smoking_areas: result.rows.map(row => ({
           id: row.id,
           category: row.category,
+          submitted_category: row.submitted_category,
           address: row.address,
           detail: row.detail,
           postal_code: row.postal_code,
