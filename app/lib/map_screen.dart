@@ -96,6 +96,36 @@ class _MapScreenState extends State<MapScreen>
       'where_smoking_welcome_dialog_v2';
   bool _shouldShowLongPressNotice = false;
 
+  // 필터 상태 관리
+  Set<String> _activeFilters = {
+    '공공데이터',
+    '공식 흡연장소',
+    '비공식 흡연장소'
+  }; // 기본적으로 모든 필터 활성화
+
+  static const List<Map<String, dynamic>> _filterCategories = [
+    {
+      'key': '공공데이터',
+      'label': '공공데이터',
+      'color': Color(0xFF2563EB),
+      'matchCategories': ['public_data', '공공데이타'] // 한글도 포함
+    },
+    {
+      'key': '공식 흡연장소',
+      'label': '공식 흡연장소',
+      'color': Color(0xFF16A34A),
+      'matchCategories': ['시민제보'],
+      'matchSubmittedCategory': '공식 흡연장소'
+    },
+    {
+      'key': '비공식 흡연장소',
+      'label': '비공식 흡연장소',
+      'color': Color(0xFFFACC15),
+      'matchCategories': ['시민제보'],
+      'matchSubmittedCategory': '비공식 흡연장소'
+    }
+  ];
+
   bool get _hasAdminAccess =>
       _adminToken != null && _adminToken!.trim().isNotEmpty;
 
@@ -157,7 +187,7 @@ class _MapScreenState extends State<MapScreen>
 
         if (_currentViewId != null && _smokingAreas.isNotEmpty) {
           print('앱 복귀 후 마커 재생성 실행: ${_smokingAreas.length}개');
-          _addMarkersToMap(_currentViewId!);
+          _addMarkersToMap(_currentViewId!, filteredOnly: true);
         }
 
         if (_lastSuccessfulViewport != null) {
@@ -676,64 +706,151 @@ class _MapScreenState extends State<MapScreen>
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildLegendChip(
-          color: const Color(0xFF2563EB),
-          label: '공공데이터',
-        ),
-        const SizedBox(height: 8),
-        _buildLegendChip(
-          color: const Color(0xFF16A34A),
-          label: '공식 흡연장소',
-        ),
-        const SizedBox(height: 8),
-        _buildLegendChip(
-          color: const Color(0xFFFACC15),
-          label: '비공식 흡연장소',
-        ),
-      ],
+      children: _filterCategories.map((filter) {
+        final key = filter['key'] as String;
+        final label = filter['label'] as String;
+        final color = filter['color'] as Color;
+        final isActive = _activeFilters.contains(key);
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: _buildFilterButton(
+            color: color,
+            label: label,
+            isActive: isActive,
+            onTap: () => _toggleFilter(key),
+          ),
+        );
+      }).toList(),
     );
   }
 
-  Widget _buildLegendChip({
+  Widget _buildFilterButton({
     required Color color,
     required String label,
+    required bool isActive,
+    required VoidCallback onTap,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(26),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 14,
-            height: 14,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: isActive ? Colors.white : Colors.white.withOpacity(0.7),
+          borderRadius: BorderRadius.circular(26),
+          border: isActive
+              ? Border.all(color: color, width: 2)
+              : Border.all(color: Colors.grey.shade300, width: 1),
+          boxShadow: isActive ? [
+            BoxShadow(
+              color: color.withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
             ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
+          ] : [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
             ),
-          ),
-        ],
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 14,
+              height: 14,
+              decoration: BoxDecoration(
+                color: isActive ? color : Colors.grey.shade400,
+                shape: BoxShape.circle,
+              ),
+              child: isActive ? const Icon(
+                Icons.check,
+                size: 10,
+                color: Colors.white,
+              ) : null,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: isActive ? Colors.black87 : Colors.grey.shade600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  // 필터 토글 기능
+  void _toggleFilter(String filterKey) {
+    setState(() {
+      if (_activeFilters.contains(filterKey)) {
+        _activeFilters.remove(filterKey);
+      } else {
+        _activeFilters.add(filterKey);
+      }
+    });
+
+    print('필터 토글: $filterKey, 활성 필터: $_activeFilters');
+
+    // 마커 재렌더링
+    _applyFiltersAndRenderMarkers();
+  }
+
+  // 필터 적용 및 마커 재렌더링
+  void _applyFiltersAndRenderMarkers() {
+    if (_currentViewId != null && mounted) {
+      // 필터링된 마커로 재렌더링
+      _addMarkersToMap(_currentViewId!, filteredOnly: true);
+    }
+  }
+
+  // 필터 조건에 맞는지 확인하는 함수
+  bool _shouldShowMarker(Map<String, dynamic> area) {
+    if (_activeFilters.isEmpty) {
+      return false; // 모든 필터가 비활성화되면 마커를 숨김
+    }
+
+    final category = area['category'] as String?;
+    final submittedCategory = area['submitted_category'] as String?;
+    final areaId = area['id'];
+
+    // 각 필터 카테고리에 대해 확인
+    for (final filterConfig in _filterCategories) {
+      final filterKey = filterConfig['key'] as String;
+
+      if (!_activeFilters.contains(filterKey)) {
+        continue; // 이 필터가 비활성화되어 있으면 건너뜀
+      }
+
+      final matchCategories = filterConfig['matchCategories'] as List<String>;
+      final matchSubmittedCategory = filterConfig['matchSubmittedCategory'] as String?;
+
+      // 카테고리 매치 확인
+      if (matchCategories.contains(category)) {
+        // submitted_category 조건이 있는 경우 추가 확인
+        if (matchSubmittedCategory != null) {
+          if (submittedCategory == matchSubmittedCategory) {
+            print('마커 표시 허용 (ID: $areaId, 필터: $filterKey, 카테고리: $category, 서브카테고리: $submittedCategory)');
+            return true;
+          }
+        } else {
+          // submitted_category 조건이 없으면 카테고리만 매치되면 표시
+          print('마커 표시 허용 (ID: $areaId, 필터: $filterKey, 카테고리: $category)');
+          return true;
+        }
+      }
+    }
+
+    print('마커 숨김 (ID: $areaId, 카테고리: $category, 서브카테고리: $submittedCategory, 활성 필터: $_activeFilters)');
+    return false; // 어떤 활성 필터 조건도 만족하지 않으면 숨김
   }
 
   Widget _buildRoundIconButton({
@@ -789,7 +906,7 @@ class _MapScreenState extends State<MapScreen>
     }
 
     if (_currentViewId != null) {
-      _addMarkersToMap(_currentViewId!);
+      _addMarkersToMap(_currentViewId!, filteredOnly: true);
     }
   }
 
@@ -914,7 +1031,7 @@ class _MapScreenState extends State<MapScreen>
         }
 
         if (_currentViewId != null) {
-          _addMarkersToMap(_currentViewId!);
+          _addMarkersToMap(_currentViewId!, filteredOnly: true);
         }
 
         if (mounted) {
@@ -1332,7 +1449,7 @@ class _MapScreenState extends State<MapScreen>
         // 데이터가 이미 로드되어 있으면 즉시 마커 추가
         if (_smokingAreas.isNotEmpty) {
           print('기존 데이터로 마커 추가: ${_smokingAreas.length}개');
-          _addMarkersToMap(loadedViewId);
+          _addMarkersToMap(loadedViewId, filteredOnly: true);
         } else {
           print('데이터 로딩 후 마커 추가 예정');
           // 데이터 로딩이 완료되면 마커가 추가됨
@@ -1352,7 +1469,7 @@ class _MapScreenState extends State<MapScreen>
         });
         _flushPendingCenterIfNeeded();
         if (_smokingAreas.isNotEmpty) {
-          _addMarkersToMap(loadedViewId);
+          _addMarkersToMap(loadedViewId, filteredOnly: true);
         }
       }
     });
@@ -1668,6 +1785,7 @@ class _MapScreenState extends State<MapScreen>
             _addMarkersToMap(
               _currentViewId!,
               fitBounds: shouldFitToMarkers,
+              filteredOnly: true,
             );
           }
 
@@ -1867,7 +1985,7 @@ class _MapScreenState extends State<MapScreen>
       _pendingMarkerRenderViewId = null;
       scheduleMicrotask(() {
         if (mounted) {
-          _addMarkersToMap(pendingViewId);
+          _addMarkersToMap(pendingViewId, filteredOnly: true);
         }
       });
     }
@@ -1898,10 +2016,15 @@ class _MapScreenState extends State<MapScreen>
     _markerRendererScriptInjectionRequested = true;
   }
 
-  void _addMarkersToMap(int viewId, {bool fitBounds = false}) {
+  void _addMarkersToMap(int viewId, {bool fitBounds = false, bool filteredOnly = false}) {
     if (_smokingAreas.isEmpty) return;
 
-    print('마커 추가 시작: ' + _smokingAreas.length.toString() + '개');
+    // 필터 적용 여부에 따라 다른 데이터 사용
+    final areasToShow = filteredOnly
+        ? _smokingAreas.where((area) => _shouldShowMarker(area as Map<String, dynamic>)).toList()
+        : _smokingAreas;
+
+    print('마커 추가 시작: ${_smokingAreas.length}개 중 ${areasToShow.length}개 표시');
 
     _ensureMarkerRendererScript();
 
@@ -1914,7 +2037,7 @@ class _MapScreenState extends State<MapScreen>
 
     _pendingMarkerRenderViewId = null;
 
-    final markerPayload = _smokingAreas.map((area) {
+    final markerPayload = areasToShow.map((area) {
       final id = area['id'];
       final address = area['address'];
       final category = area['category'];
@@ -1957,7 +2080,11 @@ class _MapScreenState extends State<MapScreen>
 
     if (mounted) {
       setState(() {
-        _statusMessage = '${_smokingAreas.length}개의 흡연구역이 지도에 표시되었습니다.';
+        if (filteredOnly && areasToShow.length != _smokingAreas.length) {
+          _statusMessage = '${areasToShow.length}개의 흡연구역이 표시됨 (총 ${_smokingAreas.length}개 중)';
+        } else {
+          _statusMessage = '${areasToShow.length}개의 흡연구역이 지도에 표시되었습니다.';
+        }
       });
     }
   }
@@ -1965,8 +2092,8 @@ class _MapScreenState extends State<MapScreen>
   // 마커 재생성 함수 (더 간단하고 확실한 방법)
   void _forceRefreshMarkers() {
     if (_currentViewId != null && _smokingAreas.isNotEmpty && mounted) {
-      print('강제 마커 재생성 실행: ${_smokingAreas.length}개');
-      _addMarkersToMap(_currentViewId!);
+      print('강제 마커 재생성 실행: ${_smokingAreas.length}개 (필터 적용)');
+      _addMarkersToMap(_currentViewId!, filteredOnly: true);
     }
   }
 
