@@ -47,6 +47,11 @@ class _MainScreenState extends State<MainScreen>
   int _currentIndex = _mapTabIndex;
   bool _hasAdminAccess = false;
 
+  // 지도 네비게이션용 상태 변수
+  double? _targetLatitude;
+  double? _targetLongitude;
+  int? _targetLocationId;
+
   @override
   void initState() {
     super.initState();
@@ -80,6 +85,16 @@ class _MainScreenState extends State<MainScreen>
     WidgetsBinding.instance.removeObserver(this);
     js.context['flutterRefreshAdminTabs'] = null;
     super.dispose();
+  }
+
+  // 지도로 이동하는 함수
+  void navigateToLocation(double latitude, double longitude, int? locationId) {
+    setState(() {
+      _targetLatitude = latitude;
+      _targetLongitude = longitude;
+      _targetLocationId = locationId;
+      _currentIndex = _mapTabIndex; // 지도 탭으로 전환
+    });
   }
 
   @override
@@ -126,9 +141,21 @@ class _MainScreenState extends State<MainScreen>
 
   List<_TabConfig> get _tabConfigs {
     final tabs = <_TabConfig>[
-      const _TabConfig(
-        screen: MapScreen(),
-        navItem: BottomNavigationBarItem(
+      _TabConfig(
+        screen: MapScreen(
+          targetLatitude: _targetLatitude,
+          targetLongitude: _targetLongitude,
+          targetLocationId: _targetLocationId,
+          onLocationNavigated: () {
+            // 네비게이션 완료 후 타겟 정보 초기화
+            setState(() {
+              _targetLatitude = null;
+              _targetLongitude = null;
+              _targetLocationId = null;
+            });
+          },
+        ),
+        navItem: const BottomNavigationBarItem(
           icon: Icon(Icons.map),
           label: '지도',
         ),
@@ -136,15 +163,17 @@ class _MainScreenState extends State<MainScreen>
     ];
 
     if (_hasAdminAccess) {
-      tabs.addAll(const [
+      tabs.addAll([
         _TabConfig(
-          screen: AdminScreen(),
-          navItem: BottomNavigationBarItem(
+          screen: AdminScreen(
+            onNavigateToLocation: navigateToLocation,
+          ),
+          navItem: const BottomNavigationBarItem(
             icon: Icon(Icons.admin_panel_settings),
             label: '관리자',
           ),
         ),
-        _TabConfig(
+        const _TabConfig(
           screen: ApiTestScreen(),
           navItem: BottomNavigationBarItem(
             icon: Icon(Icons.api),

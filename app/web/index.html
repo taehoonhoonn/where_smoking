@@ -58,6 +58,49 @@
 
       document.head.appendChild(scriptEl);
     })();
+
+    // 지도 이동을 위한 전역 함수들
+    window.moveMapToLocation = function(lat, lng, zoom) {
+      console.log('지도를 다음 위치로 이동:', lat, lng, 'zoom:', zoom);
+
+      if (typeof naver === 'undefined' || !naver.maps) {
+        console.error('네이버 지도 API가 로드되지 않았습니다.');
+        return;
+      }
+
+      // 현재 활성화된 지도 인스턴스 찾기
+      var foundMap = null;
+      for (var key in window) {
+        if (key.startsWith('naverMap_')) {
+          var mapInstance = window[key];
+          if (mapInstance && typeof mapInstance.setCenter === 'function') {
+            foundMap = mapInstance;
+            console.log('지도 인스턴스 발견:', key);
+            break;
+          }
+        }
+      }
+
+      if (foundMap) {
+        try {
+          const newCenter = new naver.maps.LatLng(lat, lng);
+          foundMap.setCenter(newCenter);
+          foundMap.setZoom(zoom || 16);
+          console.log('지도 중심을 성공적으로 이동했습니다.');
+
+          // 지도 이동 완료
+        } catch (error) {
+          console.error('지도 이동 중 오류:', error);
+        }
+      } else {
+        console.warn('지도 인스턴스를 찾을 수 없습니다. 잠시 후 재시도합니다.');
+        // 지도가 아직 초기화되지 않았을 수 있으므로 잠시 후 재시도
+        setTimeout(function() {
+          window.moveMapToLocation(lat, lng, zoom);
+        }, 500);
+      }
+    };
+
   </script>
   <script src="flutter_marker_renderer.js"></script>
   <link rel="manifest" href="manifest.json">

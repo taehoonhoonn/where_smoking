@@ -7,7 +7,12 @@ import 'package:http/http.dart' as http;
 import 'config.dart';
 
 class AdminScreen extends StatefulWidget {
-  const AdminScreen({super.key});
+  const AdminScreen({
+    super.key,
+    this.onNavigateToLocation,
+  });
+
+  final void Function(double latitude, double longitude, int? locationId)? onNavigateToLocation;
 
   @override
   State<AdminScreen> createState() => _AdminScreenState();
@@ -623,10 +628,37 @@ class _AdminScreenState extends State<AdminScreen>
                                     children: [
                                       ElevatedButton.icon(
                                         onPressed: () {
-                                          // TODO: 지도에서 보기 기능 구현
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(content: Text('지도 이동 기능은 추후 구현 예정입니다.')),
-                                          );
+                                          // 지도에서 보기 기능 구현
+                                          if (widget.onNavigateToLocation != null) {
+                                            final coordinates = area['coordinates'];
+                                            if (coordinates != null &&
+                                                coordinates['latitude'] != null &&
+                                                coordinates['longitude'] != null) {
+
+                                              final lat = coordinates['latitude'].toDouble();
+                                              final lng = coordinates['longitude'].toDouble();
+                                              final locationId = area['id'];
+
+                                              print('지도로 이동 요청: $lat, $lng (ID: $locationId)');
+
+                                              widget.onNavigateToLocation!(lat, lng, locationId);
+
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(
+                                                  content: Text('지도 탭으로 이동합니다 (${area['address'] ?? '위치 정보 없음'})'),
+                                                  duration: const Duration(seconds: 2),
+                                                ),
+                                              );
+                                            } else {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                const SnackBar(content: Text('좌표 정보를 찾을 수 없습니다.')),
+                                              );
+                                            }
+                                          } else {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text('지도 네비게이션 기능이 사용할 수 없습니다.')),
+                                            );
+                                          }
                                         },
                                         icon: const Icon(Icons.map, size: 16),
                                         label: const Text('지도에서 보기'),

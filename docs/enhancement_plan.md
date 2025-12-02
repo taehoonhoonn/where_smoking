@@ -5,9 +5,9 @@
 
 ## 🎉 구현 상태 요약 (2025년 11월 업데이트)
 
-**구현 완료율: 5/8 (63%)**
+**구현 완료율: 6/9 (67%)**
 
-✅ **완료**: 좌표 노출 제거, 허위신고 관리자 기능, 신고 수 표시, 색상 구분, 마커 테두리 색상 수정
+✅ **완료**: 좌표 노출 제거, 허위신고 관리자 기능, 신고 수 표시, 색상 구분, 마커 테두리 색상 수정, 관리자 "지도에서 보기" 기능
 ❌ **미완료**: 역지오코딩, 영어 모드, 지도 검색 기능, 필터 기능
 
 ### 주요 커밋 이력
@@ -95,6 +95,20 @@
   - 마커 렌더링 시 필터 조건에 따라 표시/숨김 처리
   - API 호출 최적화: 모든 데이터를 받아서 클라이언트에서 필터링
 - **검증**: 각 범례 클릭 후 해당 유형 마커만 표시되는지 확인
+
+### 9. 관리자 페이지 "지도에서 보기" 기능 구현 ✅ **완료**
+- **현황**: ~~`admin_screen.dart:626` 라인에 TODO로 남아있는 "지도에서 보기" 버튼 기능~~
+- **구현 완료** (2025년 12월):
+  1. ✅ **탭 간 데이터 전달**: `web_app.dart`에 상태 관리 변수 (`_targetLatitude`, `_targetLongitude`, `_targetLocationId`) 및 `navigateToLocation()` 함수 추가
+  2. ✅ **지도 이동 기능**: `MapScreen`에 위치 파라미터 추가, `didUpdateWidget()` 처리, JavaScript `moveMapToLocation()` 함수 구현
+  3. ✅ **관리자 버튼 기능**: `AdminScreen`에 `onNavigateToLocation` 콜백 추가, "지도에서 보기" 버튼에 실제 네비게이션 로직 구현
+  4. ✅ **에러 처리**: 좌표 정보 누락 시 적절한 오류 메시지 표시
+- **구현된 UX 흐름**:
+  - 관리자 화면 → 신고 목록 → "지도에서 보기" 클릭 → 지도 탭 자동 전환 → 해당 위치 이동 (줌 레벨 16) → 스낵바 알림
+- **검증 완료**:
+  - ✅ 정확한 위치 이동 확인
+  - ✅ 여러 번 클릭 시 안정적 동작
+  - ✅ 좌표 누락 시 적절한 에러 처리
 - **아키텍처 제안**:
   1. Flutter의 `MaterialApp`에 `locale`, `supportedLocales`, `localizationsDelegates`를 설정. `flutter_localizations` + `intl` 패키지 사용.
   2. `l10n/` 디렉터리에 `arb` 파일(`app_ko.arb`, `app_en.arb`)을 추가하고 `flutter gen-l10n`으로 `AppLocalizations` 생성.
@@ -128,10 +142,12 @@
 1. **카카오 Local API 연동**:
    - 백엔드에 프록시 엔드포인트 추가: `GET /api/v1/places/search`
    - 카카오 API 키워드 검색 연동 및 좌표 변환
+   - **공식 문서**: https://developers.kakao.com/docs/latest/ko/local/dev-guide#search-by-keyword
 2. **지도 검색바 UI 구현**:
    - MapScreen 상단에 검색 TextField 추가
    - 실시간 자동완성 드롭다운 리스트 구현
    - 검색 결과 선택 시 지도 이동 + 임시 마커 표시
+   - **Flutter 참고**: https://docs.flutter.dev/cookbook/forms/text-field-changes (TextField debouncing)
 3. **범례 필터 기능 구현**:
    - 기존 범례 칩을 클릭 가능한 필터 버튼으로 전환
    - 카테고리별 토글: 공공데이터/공식 시민제보/비공식 시민제보
@@ -139,11 +155,32 @@
 
 ### Phase 3 – Localization & Advanced Features (요구사항 2, 6)
 1. **역지오코딩 구현**: Naver Maps API 연동으로 시민제보 주소 자동 해석
+   - **공식 문서**: https://navermaps.github.io/maps.js.ncp/docs/tutorial-Geocoder-ReverseGeocoding.html
+   - **API 레퍼런스**: https://api.ncloud-docs.com/docs/ai-naver-mapsreversegeocoding-gc
 2. **영어 모드 구현**:
    - `l10n` 셋업 및 문자열 분리 계획 수립
    - 핵심 화면별 텍스트 치환 및 언어 토글 UX 구현
    - JS 인터롭/InfoWindow 텍스트를 다국어화하기 위한 데이터 포맷 정리
    - QA: 언어 전환 시 지도/다이얼로그/관리자/API 테스트 화면이 모두 번역되는지 확인
+   - **Flutter 공식 가이드**: https://docs.flutter.dev/ui/accessibility-and-internationalization/internationalization
+   - **Flutter intl 패키지**: https://pub.dev/packages/intl
+   - **ARB 파일 가이드**: https://docs.flutter.dev/ui/accessibility-and-internationalization/internationalization#configuring-the-l10n-yaml-file
+
+### 📚 추가 개발 참고 자료
+#### **네이버 지도 관련**
+- **네이버 지도 JavaScript API 전체 문서**: https://navermaps.github.io/maps.js.ncp/docs/
+- **지도 기본 사용법**: https://navermaps.github.io/maps.js.ncp/docs/tutorial-2-Getting-Started.html
+- **마커 및 정보창**: https://navermaps.github.io/maps.js.ncp/docs/tutorial-marker-overview.html
+
+#### **카카오 API 관련**
+- **카카오 개발자 센터 메인**: https://developers.kakao.com/
+- **REST API 키 발급**: https://developers.kakao.com/docs/latest/ko/getting-started/app#rest-api-key
+- **로컬 API 전체 가이드**: https://developers.kakao.com/docs/latest/ko/local/common
+
+#### **Flutter 개발 관련**
+- **HTTP 요청**: https://docs.flutter.dev/cookbook/networking/fetch-data
+- **상태 관리**: https://docs.flutter.dev/data-and-backend/state-mgmt/simple
+- **JavaScript 연동**: https://docs.flutter.dev/platform-integration/web/js-interop
 
 ## ✅ Resolved Questions
 - ✅ **시민제보 핀 색상 팔레트**: 공식 `#16A34A` (진한 초록), 비공식 `#FACC15` (노란색) 구현 완료
@@ -154,6 +191,10 @@
 - **영어 모드**: 한국어/영어 2개 언어 우선 구현, 향후 확장성 고려한 구조 설계
 
 ---
-**현재 상태**: Phase 1의 5개 요구사항 완료, Phase 2-3의 3개 요구사항 남음 (구현 완료율 63%)
+**현재 상태**: 6개 요구사항 완료, 4개 요구사항 남음 (구현 완료율 67%)
 
-**다음 우선순위**: Phase 2 (검색 & 필터 기능) → Phase 3 (역지오코딩 & 다국어)
+**다음 우선순위**:
+1. **흡연구역 필터 기능** (즉시 구현 가능, 사용자 편의성 대폭 개선)
+2. **지도 검색 기능** (핵심 사용자 경험 완성)
+3. **역지오코딩** (데이터 품질 향상)
+4. **영어 모드** (국제화)

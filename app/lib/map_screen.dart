@@ -11,7 +11,18 @@ import 'package:http/http.dart' as http;
 import 'config.dart';
 
 class MapScreen extends StatefulWidget {
-  const MapScreen({super.key});
+  const MapScreen({
+    super.key,
+    this.targetLatitude,
+    this.targetLongitude,
+    this.targetLocationId,
+    this.onLocationNavigated,
+  });
+
+  final double? targetLatitude;
+  final double? targetLongitude;
+  final int? targetLocationId;
+  final VoidCallback? onLocationNavigated;
 
   @override
   State<MapScreen> createState() => _MapScreenState();
@@ -112,9 +123,19 @@ class _MapScreenState extends State<MapScreen>
       }
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _moveToMyLocation();
-      _showLongPressNoticeIfNeeded(force: true);
+      _checkForTargetLocation();
     });
+  }
+
+  @override
+  void didUpdateWidget(MapScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 새로운 타겟 위치가 설정되었을 때 이동
+    if (widget.targetLatitude != null && widget.targetLongitude != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _navigateToTargetLocation();
+      });
+    }
   }
 
   @override
@@ -2043,6 +2064,65 @@ class _MapScreenState extends State<MapScreen>
         ],
       ),
     );
+  }
+
+  // 타겟 위치 확인 및 초기 처리
+  void _checkForTargetLocation() {
+    if (widget.targetLatitude != null && widget.targetLongitude != null) {
+      _navigateToTargetLocation();
+    } else {
+      _moveToMyLocation();
+      _showLongPressNoticeIfNeeded(force: true);
+    }
+  }
+
+  // 타겟 위치로 이동
+  void _navigateToTargetLocation() {
+    if (widget.targetLatitude == null || widget.targetLongitude == null) {
+      return;
+    }
+
+    final lat = widget.targetLatitude!;
+    final lng = widget.targetLongitude!;
+    final locationId = widget.targetLocationId;
+
+    print('관리자에서 요청된 위치로 이동: $lat, $lng (ID: $locationId)');
+
+    if (mounted) {
+      setState(() {
+        _statusMessage = '선택된 위치로 이동 중...';
+      });
+    }
+
+    // JavaScript를 통해 지도를 타겟 위치로 이동
+    _moveMapToLocation(lat, lng, 16); // 줌 레벨 16으로 설정
+
+    // 네비게이션 완료 콜백 호출
+    if (widget.onLocationNavigated != null) {
+      Future.delayed(const Duration(milliseconds: 800), () {
+        widget.onLocationNavigated!();
+      });
+    }
+  }
+
+  // JavaScript를 통해 지도를 특정 위치로 이동
+  void _moveMapToLocation(double lat, double lng, int zoom) {
+    try {
+      if (js.context.hasProperty('moveMapToLocation')) {
+        js.context.callMethod('moveMapToLocation', [lat, lng, zoom]);
+      } else {
+        print('moveMapToLocation JavaScript 함수가 없습니다. 대체 방법 사용.');
+        _fallbackMoveToLocation(lat, lng);
+      }
+    } catch (error) {
+      print('지도 이동 중 오류: $error');
+      _fallbackMoveToLocation(lat, lng);
+    }
+  }
+
+  // 지도 이동 대체 방법
+  void _fallbackMoveToLocation(double lat, double lng) {
+    _handleLocationSuccess(lat, lng, 100); // 정확도 100m로 설정
   }
 
   void _moveToMyLocation() {

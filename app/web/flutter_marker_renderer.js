@@ -181,4 +181,5 @@
       fitBoundsToMarkers(map, window[markersVar]);
     }
   };
+
 })();
