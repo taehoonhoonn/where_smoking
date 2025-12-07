@@ -12,6 +12,7 @@ const { checkConnection } = require('./config/database');
 // 라우터 임포트
 const smokingAreasRoutes = require('./routes/smokingAreas');
 const healthRoutes = require('./routes/health');
+const placesRoutes = require('./routes/places');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -80,6 +81,7 @@ app.get('/', (req, res) => {
       smoking_areas: `/api/${API_VERSION}/smoking-areas`,
       nearby_search: `/api/${API_VERSION}/smoking-areas/nearby`,
       statistics: `/api/${API_VERSION}/smoking-areas/statistics`,
+      place_search: `/api/${API_VERSION}/places/search`,
     },
     documentation: {
       swagger: `/api/${API_VERSION}/docs`, // TODO: Swagger 문서 추가
@@ -90,6 +92,7 @@ app.get('/', (req, res) => {
 // API 라우터 등록
 app.use(`/api/${API_VERSION}/health`, healthRoutes);
 app.use(`/api/${API_VERSION}/smoking-areas`, smokingAreasRoutes);
+app.use(`/api/${API_VERSION}/places`, placesRoutes);
 
 // 404 핸들러
 app.use('*', (req, res) => {

@@ -103,6 +103,15 @@ class _MapScreenState extends State<MapScreen>
     '비공식 흡연장소'
   }; // 기본적으로 모든 필터 활성화
 
+  // 검색 기능 관련 상태
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  List<Map<String, dynamic>> _searchResults = [];
+  bool _isSearching = false;
+  bool _showSearchResults = false;
+  Timer? _searchDebounceTimer;
+  Map<String, dynamic>? _searchMarker;
+
   static const List<Map<String, dynamic>> _filterCategories = [
     {
       'key': '공공데이터',
@@ -2103,18 +2112,35 @@ class _MapScreenState extends State<MapScreen>
 
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: Container(
-              color: Colors.black,
-              child: const HtmlElementView(viewType: 'naver-map'),
+      body: GestureDetector(
+        onTap: () {
+          // 검색 결과가 열려있을 때 배경 터치시 결과창 닫기
+          if (_showSearchResults) {
+            setState(() {
+              _showSearchResults = false;
+            });
+            _searchFocusNode.unfocus();
+          }
+        },
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Container(
+                color: Colors.black,
+                child: const HtmlElementView(viewType: 'naver-map'),
+              ),
             ),
-          ),
           SafeArea(
             child: SizedBox.expand(
               child: Stack(
                 children: [
+                  // 검색바
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 80,
+                    child: _buildSearchBar(),
+                  ),
                   Positioned(
                     top: 16,
                     right: 16,
@@ -2188,7 +2214,8 @@ class _MapScreenState extends State<MapScreen>
                 ),
               ),
             ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -2222,7 +2249,7 @@ class _MapScreenState extends State<MapScreen>
     }
 
     // JavaScript를 통해 지도를 타겟 위치로 이동
-    _moveMapToLocation(lat, lng, 16); // 줌 레벨 16으로 설정
+    _moveMapToLocation(lat, lng, zoom: 16); // 줌 레벨 16으로 설정
 
     // 네비게이션 완료 콜백 호출
     if (widget.onLocationNavigated != null) {
@@ -2232,24 +2259,52 @@ class _MapScreenState extends State<MapScreen>
     }
   }
 
-  // JavaScript를 통해 지도를 특정 위치로 이동
-  void _moveMapToLocation(double lat, double lng, int zoom) {
-    try {
-      if (js.context.hasProperty('moveMapToLocation')) {
-        js.context.callMethod('moveMapToLocation', [lat, lng, zoom]);
-      } else {
-        print('moveMapToLocation JavaScript 함수가 없습니다. 대체 방법 사용.');
-        _fallbackMoveToLocation(lat, lng);
-      }
-    } catch (error) {
-      print('지도 이동 중 오류: $error');
-      _fallbackMoveToLocation(lat, lng);
-    }
-  }
 
   // 지도 이동 대체 방법
   void _fallbackMoveToLocation(double lat, double lng) {
-    _handleLocationSuccess(lat, lng, 100); // 정확도 100m로 설정
+    print('🔄 fallback 지도 이동 사용: $lat, $lng');
+
+    // 더 직접적인 방법으로 지도 이동 시도
+    try {
+      final String directScript = '''
+        (function() {
+          console.log('🔄 Fallback: 모든 지도 인스턴스에서 이동 시도');
+
+          // 모든 지도 인스턴스 확인
+          if (window.naverMapInstances) {
+            const instances = Object.keys(window.naverMapInstances);
+            console.log('사용 가능한 지도 인스턴스:', instances);
+
+            for (const viewId of instances) {
+              const map = window.naverMapInstances[viewId];
+              if (map && map.setCenter) {
+                console.log('🎯 지도 인스턴스 ' + viewId + '로 이동 시도');
+                const position = new naver.maps.LatLng($lat, $lng);
+                map.setCenter(position);
+                map.setZoom(16);
+                console.log('✅ 지도 이동 성공: ' + viewId);
+                return true;
+              }
+            }
+          }
+
+          console.log('❌ 모든 fallback 방법 실패');
+          return false;
+        })();
+      ''';
+
+      final result = js.context.callMethod('eval', [directScript]);
+      if (result == true) {
+        print('✅ Fallback 지도 이동 성공');
+        return;
+      }
+    } catch (error) {
+      print('❌ Fallback 스크립트 실행 오류: $error');
+    }
+
+    // 최후의 수단: 기존 handleLocationSuccess 사용
+    print('🔄 최후의 수단: handleLocationSuccess 사용');
+    _handleLocationSuccess(lat, lng, 100);
   }
 
   void _moveToMyLocation() {
@@ -2780,11 +2835,363 @@ class _MapScreenState extends State<MapScreen>
     _rendererReadyTimer = null;
     _pendingMarkerRenderViewId = null;
 
+    // 검색 관련 리소스 정리
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    _searchDebounceTimer?.cancel();
+
     // viewId별 콜백도 정리
     if (_currentViewId != null) {
       js.context['flutter_naver_map_loaded_$_currentViewId'] = null;
     }
 
     super.dispose();
+  }
+
+  // 검색 관련 메서드들
+  void _onSearchChanged(String query) {
+    _searchDebounceTimer?.cancel();
+    if (query.trim().isEmpty) {
+      setState(() {
+        _showSearchResults = false;
+        _searchResults = [];
+      });
+      _clearSearchMarker();
+      return;
+    }
+
+    _searchDebounceTimer = Timer(const Duration(milliseconds: 300), () {
+      _performSearch(query.trim());
+    });
+  }
+
+  Future<void> _performSearch(String query) async {
+    if (query.isEmpty) return;
+
+    setState(() {
+      _isSearching = true;
+      _showSearchResults = true;
+    });
+
+    try {
+      // 임시로 직접 URL 사용 (CORS 및 연결 문제 해결용)
+      final apiUrl = 'http://localhost:3000/api/v1/places/search?query=${Uri.encodeComponent(query)}&size=10';
+      print('검색 API 호출: $apiUrl');
+
+      final response = await http.get(
+        Uri.parse(apiUrl),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 10));
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true && data['data'] != null) {
+          setState(() {
+            _searchResults = List<Map<String, dynamic>>.from(data['data']['places'] ?? []);
+            _isSearching = false;
+          });
+        } else {
+          setState(() {
+            _searchResults = [];
+            _isSearching = false;
+          });
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(data['error'] ?? '검색 결과를 가져올 수 없습니다'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      } else {
+        setState(() {
+          _searchResults = [];
+          _isSearching = false;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('검색 서버에 연결할 수 없습니다'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (error) {
+      print('검색 오류: $error');
+      if (mounted) {
+        setState(() {
+          _searchResults = [];
+          _isSearching = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('검색 중 오류가 발생했습니다: ${error.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _selectSearchResult(Map<String, dynamic> place) {
+    _searchController.text = place['placeName'] ?? '';
+    setState(() {
+      _showSearchResults = false;
+    });
+    _searchFocusNode.unfocus();
+
+    final double lat = place['y']?.toDouble() ?? 0.0;
+    final double lng = place['x']?.toDouble() ?? 0.0;
+
+    if (lat != 0.0 && lng != 0.0) {
+      _moveMapToLocation(lat, lng, zoom: 16);
+      _addSearchMarker(place);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${place['placeName']}으로 이동했습니다'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  void _moveMapToLocation(double lat, double lng, {double? zoom}) {
+    print('🗺️ 지도 이동 시도: 위도=$lat, 경도=$lng, 줌=$zoom, viewId=$_currentViewId');
+
+    if (_currentViewId == null) {
+      print('❌ 지도 이동 실패: _currentViewId가 null입니다. fallback 사용');
+      _fallbackMoveToLocation(lat, lng);
+      return;
+    }
+
+    try {
+      // 먼저 기존 방식으로 시도
+      if (js.context.hasProperty('moveMapToLocation')) {
+        print('📍 기존 moveMapToLocation 함수 사용');
+        js.context.callMethod('moveMapToLocation', [lat, lng, zoom ?? 16]);
+        return;
+      }
+
+      // 새로운 방식으로 시도
+      final String script = '''
+        (function() {
+          console.log('🔍 지도 인스턴스 검색 중, viewId: $_currentViewId');
+          console.log('📍 이동할 좌표: $lat, $lng');
+
+          const mapInstance = window.naverMapInstances && window.naverMapInstances[$_currentViewId];
+          if (mapInstance) {
+            console.log('✅ 지도 인스턴스 발견, 이동 시작');
+            const position = new naver.maps.LatLng($lat, $lng);
+            mapInstance.setCenter(position);
+            ${zoom != null ? 'mapInstance.setZoom($zoom);' : ''}
+            console.log('🎯 지도 이동 완료: ' + $lat + ', ' + $lng);
+            return true;
+          } else {
+            console.error('❌ 지도 인스턴스를 찾을 수 없음. viewId: $_currentViewId');
+            console.log('📋 사용 가능한 인스턴스들:', Object.keys(window.naverMapInstances || {}));
+            return false;
+          }
+        })();
+      ''';
+
+      final result = js.context.callMethod('eval', [script]);
+      if (result != true) {
+        print('🔄 JavaScript 이동 실패, fallback 사용');
+        _fallbackMoveToLocation(lat, lng);
+      }
+    } catch (error) {
+      print('❌ 지도 이동 JavaScript 실행 오류: $error, fallback 사용');
+      _fallbackMoveToLocation(lat, lng);
+    }
+  }
+
+  void _addSearchMarker(Map<String, dynamic> place) {
+    if (_currentViewId == null) return;
+
+    final double lat = place['y']?.toDouble() ?? 0.0;
+    final double lng = place['x']?.toDouble() ?? 0.0;
+
+    if (lat == 0.0 || lng == 0.0) return;
+
+    setState(() {
+      _searchMarker = place;
+    });
+
+    try {
+      final String script = '''
+        (function() {
+          const mapInstance = window.naverMapInstances && window.naverMapInstances[$_currentViewId];
+          if (mapInstance) {
+            // 기존 검색 마커 제거
+            if (window.searchMarker$_currentViewId) {
+              window.searchMarker$_currentViewId.setMap(null);
+              delete window.searchMarker$_currentViewId;
+            }
+
+            // 새 검색 마커 추가
+            const position = new naver.maps.LatLng($lat, $lng);
+            const marker = new naver.maps.Marker({
+              position: position,
+              map: mapInstance,
+              title: '${place['placeName']?.replaceAll("'", "\\'")}',
+              icon: {
+                content: '<div style="background: #ff4444; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">${place['placeName']?.replaceAll("'", "\\'")}</div>',
+                anchor: new naver.maps.Point(0, 0)
+              },
+              zIndex: 1000
+            });
+
+            window.searchMarker$_currentViewId = marker;
+            console.log('검색 마커가 추가되었습니다:', '${place['placeName']}');
+          }
+        })();
+      ''';
+      js.context.callMethod('eval', [script]);
+    } catch (error) {
+      print('검색 마커 추가 오류: $error');
+    }
+  }
+
+  void _clearSearchMarker() {
+    if (_currentViewId == null) return;
+
+    setState(() {
+      _searchMarker = null;
+    });
+
+    try {
+      final String script = '''
+        (function() {
+          if (window.searchMarker$_currentViewId) {
+            window.searchMarker$_currentViewId.setMap(null);
+            delete window.searchMarker$_currentViewId;
+            console.log('검색 마커가 제거되었습니다');
+          }
+        })();
+      ''';
+      js.context.callMethod('eval', [script]);
+    } catch (error) {
+      print('검색 마커 제거 오류: $error');
+    }
+  }
+
+  Widget _buildSearchBar() {
+    return Container(
+      margin: const EdgeInsets.only(left: 16, right: 16, top: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextField(
+            controller: _searchController,
+            focusNode: _searchFocusNode,
+            onChanged: _onSearchChanged,
+            onTap: () {
+              if (_searchController.text.isNotEmpty && _searchResults.isNotEmpty) {
+                setState(() {
+                  _showSearchResults = true;
+                });
+              }
+            },
+            decoration: InputDecoration(
+              hintText: '장소나 주소를 검색하세요',
+              prefixIcon: Icon(
+                Icons.search,
+                color: Colors.grey[600],
+              ),
+              suffixIcon: _searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() {
+                          _showSearchResults = false;
+                          _searchResults = [];
+                        });
+                        _clearSearchMarker();
+                      },
+                    )
+                  : null,
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+          ),
+          if (_showSearchResults) _buildSearchResults(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchResults() {
+    if (_isSearching) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        child: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_searchResults.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        child: const Text(
+          '검색 결과가 없습니다',
+          style: TextStyle(
+            color: Colors.grey,
+            fontSize: 14,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      );
+    }
+
+    return Container(
+      constraints: const BoxConstraints(maxHeight: 200),
+      child: ListView.separated(
+        shrinkWrap: true,
+        itemCount: _searchResults.length,
+        separatorBuilder: (context, index) => const Divider(height: 1),
+        itemBuilder: (context, index) {
+          final place = _searchResults[index];
+          return ListTile(
+            dense: true,
+            title: Text(
+              place['placeName'] ?? '',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            subtitle: Text(
+              place['addressName'] ?? place['roadAddressName'] ?? '',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            onTap: () => _selectSearchResult(place),
+          );
+        },
+      ),
+    );
   }
 }

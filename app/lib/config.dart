@@ -4,21 +4,27 @@ const String _defaultApiBaseUrl =
     String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:3000/api/v1');
 
 String getApiBaseUrl() {
-  const candidates = ['API_BASE_URL', '_base_Url'];
-
-  for (final key in candidates) {
-    try {
-      if (!js.context.hasProperty(key)) {
-        continue;
-      }
-      final value = js.context[key];
+  try {
+    // window.API_BASE_URL에서 직접 읽기
+    if (js.context.hasProperty('API_BASE_URL')) {
+      final value = js.context['API_BASE_URL'];
       if (value is String && value.trim().isNotEmpty) {
         return value.trim();
       }
-    } catch (_) {
-      // ignore and fall back to default value
     }
+
+    // window 객체를 통해 접근 시도
+    final window = js.context['window'];
+    if (window != null && window['API_BASE_URL'] != null) {
+      final value = window['API_BASE_URL'];
+      if (value is String && value.trim().isNotEmpty) {
+        return value.trim();
+      }
+    }
+  } catch (e) {
+    print('API URL 설정 읽기 실패: $e');
   }
 
+  print('기본 API URL 사용: $_defaultApiBaseUrl');
   return _defaultApiBaseUrl;
 }
