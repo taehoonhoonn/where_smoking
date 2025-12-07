@@ -2875,7 +2875,7 @@ class _MapScreenState extends State<MapScreen>
 
     try {
       // 임시로 직접 URL 사용 (CORS 및 연결 문제 해결용)
-      final apiUrl = 'http://localhost:3000/api/v1/places/search?query=${Uri.encodeComponent(query)}&size=10';
+      final apiUrl = '${_baseUrl}/places/search?query=${Uri.encodeComponent(query)}&size=10';
       print('검색 API 호출: $apiUrl');
 
       final response = await http.get(

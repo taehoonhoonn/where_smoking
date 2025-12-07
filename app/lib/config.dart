@@ -1,7 +1,7 @@
 import 'dart:js' as js;
 
 const String _defaultApiBaseUrl =
-    String.fromEnvironment('API_BASE_URL', defaultValue: 'https://api.wheresmoking.kr/api/v1');
+    String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:3000/api/v1');
 
 String getApiBaseUrl() {
   try {
