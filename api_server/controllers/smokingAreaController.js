@@ -1,5 +1,6 @@
 const { query } = require('../config/database');
 const { debugLogger, errorLogger } = require('../config/logger');
+const GeocodingService = require('../services/geocodingService');
 
 const SUBMITTED_CATEGORY_OPTIONS = [
   { key: 'official', label: '공식 흡연장소' },
@@ -422,8 +423,8 @@ class SmokingAreaController {
         detail: detail ? 'provided' : 'not provided',
       });
 
-      // 역지오코딩으로 주소 가져오기 (임시로 좌표 기반 주소 생성)
-      const address = `서울특별시 (${latNum.toFixed(4)}, ${lngNum.toFixed(4)})`;
+      // 역지오코딩으로 실제 주소 가져오기 (실패 시 좌표 기반 폴백)
+      const address = await GeocodingService.getAddressOrFallback(latNum, lngNum);
 
       // 데이터베이스에 대기 상태로 저장
       const result = await query(`

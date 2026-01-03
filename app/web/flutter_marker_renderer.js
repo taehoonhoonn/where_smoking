@@ -182,4 +182,123 @@
     }
   };
 
+  // 중앙 핀 마커 추가 함수 (검색된 위치를 명확하게 표시)
+  window.addCenterPinMarker = function(viewId, lat, lng) {
+    if (typeof viewId === 'undefined' || viewId === null) {
+      console.warn('viewId가 없어 중앙 핀을 추가할 수 없습니다.');
+      return;
+    }
+
+    var mapVar = 'naverMap_' + viewId;
+    var centerPinVar = 'centerPinMarker_' + viewId;
+
+    var map = window[mapVar];
+    if (!map) {
+      console.warn('지도 객체를 찾을 수 없어 중앙 핀 생성을 건너뜁니다.');
+      return;
+    }
+
+    // 기존 중앙 핀 제거
+    if (window[centerPinVar]) {
+      try {
+        window[centerPinVar].setMap(null);
+        delete window[centerPinVar];
+      } catch (err) {
+        console.warn('기존 중앙 핀 제거 실패:', err);
+      }
+    }
+
+    // 펄싱 애니메이션을 포함한 위치 핀 SVG
+    var centerPinSvg = `
+      <div style="position: relative; width: 50px; height: 50px;">
+        <!-- 펄싱 애니메이션 링 -->
+        <style>
+          @keyframes pulse {
+            0% {
+              transform: scale(0.8);
+              opacity: 0.8;
+            }
+            50% {
+              transform: scale(1.3);
+              opacity: 0.3;
+            }
+            100% {
+              transform: scale(0.8);
+              opacity: 0.8;
+            }
+          }
+          .pulse-ring {
+            animation: pulse 2s ease-in-out infinite;
+          }
+        </style>
+
+        <!-- 외부 펄싱 링 -->
+        <div class="pulse-ring" style="
+          position: absolute;
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          background-color: rgba(255, 68, 68, 0.3);
+          top: 5px;
+          left: 5px;
+        "></div>
+
+        <!-- 위치 핀 아이콘 -->
+        <svg width="50" height="50" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg" style="position: absolute; top: 0; left: 0;">
+          <!-- 핀 그림자 -->
+          <ellipse cx="25" cy="45" rx="8" ry="3" fill="rgba(0,0,0,0.3)"/>
+
+          <!-- 핀 본체 -->
+          <path d="M 25 5 C 17 5 10 12 10 20 C 10 30 25 45 25 45 C 25 45 40 30 40 20 C 40 12 33 5 25 5 Z"
+                fill="#ff4444"
+                stroke="#cc0000"
+                stroke-width="2"/>
+
+          <!-- 핀 내부 원 -->
+          <circle cx="25" cy="20" r="6" fill="white"/>
+
+          <!-- 핀 내부 점 -->
+          <circle cx="25" cy="20" r="3" fill="#ff4444"/>
+        </svg>
+      </div>
+    `;
+
+    // 중앙 핀 마커 생성
+    try {
+      var marker = new naver.maps.Marker({
+        position: new naver.maps.LatLng(lat, lng),
+        map: map,
+        icon: {
+          content: centerPinSvg,
+          anchor: new naver.maps.Point(25, 45)  // 핀 아래쪽 끝을 기준점으로
+        },
+        zIndex: 999  // 검색 마커(1000)보다 약간 낮게
+      });
+
+      window[centerPinVar] = marker;
+      console.log('중앙 핀 마커가 추가되었습니다:', lat, lng);
+    } catch (err) {
+      console.error('중앙 핀 마커 생성 오류:', err);
+    }
+  };
+
+  // 중앙 핀 제거 함수
+  window.removeCenterPinMarker = function(viewId) {
+    if (typeof viewId === 'undefined' || viewId === null) {
+      return;
+    }
+
+    var centerPinVar = 'centerPinMarker_' + viewId;
+
+    if (window[centerPinVar]) {
+      try {
+        window[centerPinVar].setMap(null);
+        delete window[centerPinVar];
+        console.log('중앙 핀 마커가 제거되었습니다.');
+      } catch (err) {
+        console.warn('중앙 핀 제거 실패:', err);
+      }
+    }
+  };
+
 })();

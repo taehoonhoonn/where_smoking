@@ -2948,8 +2948,9 @@ class _MapScreenState extends State<MapScreen>
     final double lng = place['x']?.toDouble() ?? 0.0;
 
     if (lat != 0.0 && lng != 0.0) {
-      _moveMapToLocation(lat, lng, zoom: 16);
+      _moveMapToLocation(lat, lng, zoom: 18);
       _addSearchMarker(place);
+      _addCenterPin(lat, lng);  // 검색 위치에 중앙 핀 추가
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -3078,6 +3079,37 @@ class _MapScreenState extends State<MapScreen>
       js.context.callMethod('eval', [script]);
     } catch (error) {
       print('검색 마커 제거 오류: $error');
+    }
+
+    // 중앙 핀도 함께 제거
+    _removeCenterPin();
+  }
+
+  void _addCenterPin(double lat, double lng) {
+    if (_currentViewId == null) return;
+
+    try {
+      if (js.context.hasProperty('addCenterPinMarker')) {
+        js.context.callMethod('addCenterPinMarker', [_currentViewId, lat, lng]);
+        print('중앙 핀이 추가되었습니다: $lat, $lng');
+      } else {
+        print('addCenterPinMarker 함수를 찾을 수 없습니다');
+      }
+    } catch (error) {
+      print('중앙 핀 추가 오류: $error');
+    }
+  }
+
+  void _removeCenterPin() {
+    if (_currentViewId == null) return;
+
+    try {
+      if (js.context.hasProperty('removeCenterPinMarker')) {
+        js.context.callMethod('removeCenterPinMarker', [_currentViewId]);
+        print('중앙 핀이 제거되었습니다');
+      }
+    } catch (error) {
+      print('중앙 핀 제거 오류: $error');
     }
   }
 
